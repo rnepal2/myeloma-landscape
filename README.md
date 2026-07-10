@@ -5,9 +5,12 @@ A source-linked public intelligence application for tracking multiple myeloma tr
 ## What is included
 
 - Live ClinicalTrials.gov API v2 ingestion
+- PubMed publication momentum and recent citation explorer
+- NIH RePORTER funding signals for disease-titled projects
+- Automated FDA oncology approval-notification ingestion
 - Version-controlled myeloma asset, target and modality ontology
 - Change events computed between accepted snapshots
-- Trial explorer, asset map, landscape charts and regulatory timeline
+- Executive overview, paginated trial explorer, integrated pipeline/asset map, evidence intelligence and regulatory timeline
 - Data-quality gates that fail closed
 - Cloudflare Worker Static Assets configuration
 - Scheduled GitHub Actions refresh and deployment workflows
@@ -46,6 +49,8 @@ For GitHub deployment, configure repository secrets `CLOUDFLARE_API_TOKEN` and `
 
 ## Data method
 
-The registry query is `query.cond="Multiple Myeloma"`. Headline “active” counts include recruiting, active-not-recruiting, not-yet-recruiting and enrolling-by-invitation records. Interventions are classified using `config/ontology.json`. Unmatched interventions remain unclassified rather than being inferred without evidence.
+The registry query is `query.cond="Multiple Myeloma"`. Headline “active” counts include interventional studies that are recruiting, active-not-recruiting, not-yet-recruiting or enrolling-by-invitation. Interventions are classified using `config/ontology.json`. Unmatched interventions remain unclassified rather than being inferred without evidence.
 
-Regulatory records in `config/regulatory_events.json` are curated at the indication/regimen level and link to FDA source material. They are deliberately not inferred from the existence of a product record.
+The evidence layer uses PubMed E-utilities for citations with multiple myeloma in the title and NIH RePORTER for recent awards with the disease phrase in the project title. These are activity signals—not measures of evidence quality, clinical benefit or commercial attractiveness.
+
+Current regulatory records are retrieved from FDA oncology approval notifications. `config/regulatory_events.json` provides older or fallback milestones. Events are kept at the indication/regimen level and are deliberately not inferred from the existence of a product record.

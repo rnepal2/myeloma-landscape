@@ -24,6 +24,8 @@ ONTOLOGY = json.loads((ROOT / "config" / "ontology.json").read_text())
 REGULATORY = json.loads((ROOT / "config" / "regulatory_events.json").read_text())
 API = "https://clinicaltrials.gov/api/v2/studies"
 FDA_ONCOLOGY = "https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications"
+EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+NIH_REPORTER = "https://api.reporter.nih.gov/v2/projects/search"
 QUERY = '"Multiple Myeloma"'
 FIELDS = "|".join([
     "NCTId", "BriefTitle", "BriefSummary", "OverallStatus", "Phase", "StudyType",
@@ -41,6 +43,20 @@ def fetch_json(url: str, attempts: int = 4) -> dict:
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "myeloma-landscape-radar/0.1 (public research project)"})
             with urllib.request.urlopen(req, timeout=45) as response:
+                return json.load(response)
+        except Exception:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(2 ** attempt)
+    raise RuntimeError("unreachable")
+
+
+def post_json(url: str, payload: dict, attempts: int = 4) -> dict:
+    body = json.dumps(payload).encode("utf-8")
+    for attempt in range(attempts):
+        try:
+            req = urllib.request.Request(url, data=body, headers={"User-Agent": "myeloma-landscape-radar/0.1 (public research project)", "Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=60) as response:
                 return json.load(response)
         except Exception:
             if attempt == attempts - 1:
@@ -116,6 +132,80 @@ def fetch_fda_events() -> list[dict]:
     if not events:
         raise RuntimeError("FDA page returned no multiple myeloma approval events")
     return sorted(events, key=lambda x: x["date"], reverse=True)
+
+
+def fetch_pubmed_evidence() -> dict:
+    query = '("multiple myeloma"[Title] OR "plasma cell myeloma"[Title])'
+    params = {"db": "pubmed", "term": query, "retmode": "json", "retmax": "200", "sort": "pub date"}
+    search = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode(params)}")
+    search_result = search.get("esearchresult", {})
+    ids = search_result.get("idlist", [])
+    if not ids:
+        raise RuntimeError("PubMed returned no evidence records")
+    time.sleep(0.4)
+    summaries = fetch_json(f"{EUTILS}/esummary.fcgi?{urllib.parse.urlencode({'db':'pubmed','id':','.join(ids),'retmode':'json'})}").get("result", {})
+    publications = []
+    for pmid in ids:
+        item = summaries.get(pmid, {})
+        title = re.sub(r"\s+", " ", item.get("title", "")).strip().rstrip(".")
+        if not title:
+            continue
+        lower = title.lower()
+        linked_assets = []
+        linked_targets = set()
+        for asset in ONTOLOGY["assets"]:
+            if any(re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", lower) for alias in asset["aliases"]):
+                linked_assets.append(asset["name"]); linked_targets.add(asset["target"])
+        for rule in ONTOLOGY["target_rules"]:
+            if re.search(rule["pattern"], lower, re.I):
+                linked_targets.add(rule["value"])
+        article_ids = {x.get("idtype"): x.get("value") for x in item.get("articleids", [])}
+        date = item.get("sortpubdate", "")[:10].replace("/", "-") or item.get("pubdate", "")
+        authors = [x.get("name") for x in item.get("authors", [])[:4] if x.get("name")]
+        publications.append({
+            "pmid": pmid, "title": title, "date": date, "journal": item.get("fulljournalname") or item.get("source") or "Not reported",
+            "authors": authors, "doi": article_ids.get("doi"), "linkedAssets": sorted(set(linked_assets)),
+            "linkedTargets": sorted(linked_targets), "sourceUrl": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+        })
+    counts_by_year = []
+    current_year = datetime.now(timezone.utc).year
+    for year in range(current_year - 5, current_year + 1):
+        time.sleep(0.4)
+        year_query = f'{query} AND {year}[PDAT]'
+        count_payload = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode({'db':'pubmed','term':year_query,'retmode':'json','retmax':'0'})}")
+        counts_by_year.append({"name": str(year), "value": int(count_payload.get("esearchresult", {}).get("count", 0))})
+    target_counter = Counter(target for pub in publications for target in pub["linkedTargets"])
+    journal_counter = Counter(pub["journal"] for pub in publications)
+    grant_payload = {
+        "criteria": {"advanced_text_search": {"operator": "and", "search_field": "projecttitle", "search_text": '"multiple myeloma"'}, "fiscal_years": [current_year - 2, current_year - 1, current_year]},
+        "include_fields": ["ApplId", "ProjectTitle", "Organization", "ProjectNum", "FiscalYear", "AwardAmount", "AwardNoticeDate", "ProjectStartDate", "ProjectEndDate", "PrincipalInvestigators", "ProjectDetailUrl"],
+        "offset": 0, "limit": 250, "sort_field": "award_notice_date", "sort_order": "desc"
+    }
+    grant_response = post_json(NIH_REPORTER, grant_payload)
+    grants = []
+    for item in grant_response.get("results", []):
+        org = item.get("organization") or {}
+        grants.append({
+            "id": str(item.get("appl_id")), "title": item.get("project_title", "Untitled project"),
+            "organization": org.get("org_name", "Not reported"), "projectNumber": item.get("project_num"),
+            "fiscalYear": item.get("fiscal_year"), "awardAmount": item.get("award_amount") or 0,
+            "awardDate": (item.get("award_notice_date") or "")[:10],
+            "principalInvestigators": [x.get("full_name", "").strip() for x in item.get("principal_investigators", []) if x.get("full_name")],
+            "sourceUrl": item.get("project_detail_url") or "https://reporter.nih.gov/",
+        })
+    grant_years = Counter()
+    for grant in grants:
+        grant_years[str(grant["fiscalYear"])] += grant["awardAmount"]
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "query": query, "totalCount": int(search_result.get("count", 0)), "sampleSize": len(publications),
+        "countsByYear": counts_by_year, "targetMomentum": [{"name": k, "value": v} for k, v in target_counter.most_common(10)],
+        "topJournals": [{"name": k, "value": v} for k, v in journal_counter.most_common(8)],
+        "publications": publications,
+        "grantCount": int(grant_response.get("meta", {}).get("total", len(grants))), "grants": grants,
+        "grantAwardsByYear": [{"name": str(y), "value": grant_years[str(y)]} for y in range(current_year - 2, current_year + 1)],
+        "methodology": "Most recent PubMed records matching multiple myeloma in the citation title; target and asset links use deterministic title matching and do not imply evidence quality, clinical relevance or positive outcomes. NIH funding records require the disease phrase in the project title."
+    }
 
 
 def compact_date(module: dict, key: str) -> str | None:
@@ -291,6 +381,13 @@ def main() -> None:
         print(f"FDA refresh warning; retaining curated fallback: {exc}", file=sys.stderr)
         regulatory = sorted(REGULATORY, key=lambda x: x["date"], reverse=True)
     write_json(OUT / "regulatory.json", regulatory)
+    try:
+        evidence = fetch_pubmed_evidence()
+        write_json(OUT / "evidence.json", evidence)
+    except Exception as exc:
+        if not (OUT / "evidence.json").exists():
+            raise
+        print(f"PubMed refresh warning; retaining accepted evidence snapshot: {exc}", file=sys.stderr)
     print(f"Built {len(trials):,} trials, {len(assets):,} assets, version {version}")
 
 

@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckCircle2, CircleDot, ExternalLink, Info, Search, SlidersHorizontal, X } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useEffect } from 'react'
 import { cx, prettyEnum, shortDate } from './lib'
 import type { Trial } from './types'
 
@@ -27,6 +28,12 @@ export function SourceNote({ children }: { children: ReactNode }) {
 }
 
 export function TrialDrawer({ trial, onClose }: { trial: Trial | null; onClose: () => void }) {
+  useEffect(() => {
+    if (!trial) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    addEventListener('keydown', close); document.body.style.overflow = 'hidden'
+    return () => { removeEventListener('keydown', close); document.body.style.overflow = '' }
+  }, [trial, onClose])
   if (!trial) return null
   return <div className="drawer-scrim" onMouseDown={onClose} role="presentation">
     <aside className="drawer" onMouseDown={e => e.stopPropagation()} aria-label="Trial detail">

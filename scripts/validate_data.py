@@ -9,7 +9,7 @@ def fail(message):
     raise SystemExit(f"DATA VALIDATION FAILED: {message}")
 
 def main():
-    required = ["summary", "trials", "assets", "changes", "regulatory"]
+    required = ["summary", "trials", "assets", "changes", "regulatory", "evidence"]
     payload = {}
     for name in required:
         path = DATA / f"{name}.json"
@@ -27,6 +27,11 @@ def main():
     broken = [a["id"] for a in assets if not set(a["trialIds"]).issubset(id_set)]
     if broken: fail(f"broken asset references: {broken[:3]}")
     if not payload["regulatory"]: fail("regulatory timeline empty")
-    print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(payload['changes'])} signals")
+    evidence = payload["evidence"]
+    if evidence.get("sampleSize", 0) < 100 or len(evidence.get("countsByYear", [])) != 6: fail("PubMed evidence snapshot incomplete")
+    if any(not p.get("pmid") or not p.get("sourceUrl") for p in evidence["publications"]): fail("PubMed evidence provenance incomplete")
+    if evidence.get("grantCount", 0) < 25 or not evidence.get("grants"): fail("NIH RePORTER snapshot incomplete")
+    if any(not g.get("id") or not g.get("sourceUrl") for g in evidence["grants"]): fail("NIH grant provenance incomplete")
+    print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(payload['changes'])} signals, {evidence['sampleSize']} publications, {evidence['grantCount']} grants")
 
 if __name__ == "__main__": main()

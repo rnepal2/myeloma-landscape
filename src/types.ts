@@ -79,3 +79,40 @@ export type RegulatoryEvent = {
   eventType: string
   sourceUrl: string
 }
+
+export type Publication = {
+  pmid: string
+  title: string
+  date: string
+  journal: string
+  authors: string[]
+  doi?: string
+  linkedAssets: string[]
+  linkedTargets: string[]
+  sourceUrl: string
+}
+
+export type Evidence = {
+  generatedAt: string
+  query: string
+  totalCount: number
+  sampleSize: number
+  countsByYear: { name: string; value: number }[]
+  targetMomentum: { name: string; value: number }[]
+  topJournals: { name: string; value: number }[]
+  publications: Publication[]
+  grantCount: number
+  grants: {
+    id: string
+    title: string
+    organization: string
+    projectNumber?: string
+    fiscalYear: number
+    awardAmount: number
+    awardDate: string
+    principalInvestigators: string[]
+    sourceUrl: string
+  }[]
+  grantAwardsByYear: { name: string; value: number }[]
+  methodology: string
+}
