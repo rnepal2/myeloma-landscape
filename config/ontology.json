@@ -1,0 +1,37 @@
+{
+  "assets": [
+    {"name":"Daratumumab","aliases":["daratumumab","darzalex","darzalex faspro"],"target":"CD38","modality":"Monoclonal antibody"},
+    {"name":"Isatuximab","aliases":["isatuximab","sarclisa"],"target":"CD38","modality":"Monoclonal antibody"},
+    {"name":"Elotuzumab","aliases":["elotuzumab","empliciti"],"target":"SLAMF7","modality":"Monoclonal antibody"},
+    {"name":"Teclistamab","aliases":["teclistamab","tecvayli","jnj-64007957","jnj 64007957"],"target":"BCMA × CD3","modality":"Bispecific antibody"},
+    {"name":"Elranatamab","aliases":["elranatamab","elrexfio","pf-06863135"],"target":"BCMA × CD3","modality":"Bispecific antibody"},
+    {"name":"Linvoseltamab","aliases":["linvoseltamab","regn5458"],"target":"BCMA × CD3","modality":"Bispecific antibody"},
+    {"name":"Alnuctamab","aliases":["alnuctamab","cc-93269","bms-986349"],"target":"BCMA × CD3","modality":"Bispecific antibody"},
+    {"name":"Talquetamab","aliases":["talquetamab","talvey","jnj-64407564"],"target":"GPRC5D × CD3","modality":"Bispecific antibody"},
+    {"name":"Cevostamab","aliases":["cevostamab","bfcr4350a","rg6160"],"target":"FcRH5 × CD3","modality":"Bispecific antibody"},
+    {"name":"Idecabtagene vicleucel","aliases":["idecabtagene vicleucel","ide-cel","bb2121","abecma"],"target":"BCMA","modality":"CAR-T cell therapy"},
+    {"name":"Ciltacabtagene autoleucel","aliases":["ciltacabtagene autoleucel","cilta-cel","jnj-68284528","carvykti"],"target":"BCMA","modality":"CAR-T cell therapy"},
+    {"name":"Anitocabtagene autoleucel","aliases":["anitocabtagene autoleucel","anito-cel","cart-ddbcma"],"target":"BCMA","modality":"CAR-T cell therapy"},
+    {"name":"Zevorcabtagene autoleucel","aliases":["zevorcabtagene autoleucel","zevor-cel","ct053"],"target":"BCMA","modality":"CAR-T cell therapy"},
+    {"name":"Belantamab mafodotin","aliases":["belantamab mafodotin","blenrep","gsk2857916"],"target":"BCMA","modality":"Antibody–drug conjugate"},
+    {"name":"Mezigdomide","aliases":["mezigdomide","cc-92480","bms-986348"],"target":"Cereblon","modality":"CELMoD"},
+    {"name":"Iberdomide","aliases":["iberdomide","cc-220","bms-986382"],"target":"Cereblon","modality":"CELMoD"},
+    {"name":"Lenalidomide","aliases":["lenalidomide","revlimid"],"target":"Cereblon","modality":"IMiD"},
+    {"name":"Pomalidomide","aliases":["pomalidomide","pomalyst","imnovid"],"target":"Cereblon","modality":"IMiD"},
+    {"name":"Thalidomide","aliases":["thalidomide","thalomid"],"target":"Cereblon","modality":"IMiD"},
+    {"name":"Bortezomib","aliases":["bortezomib","velcade"],"target":"Proteasome","modality":"Proteasome inhibitor"},
+    {"name":"Carfilzomib","aliases":["carfilzomib","kyprolis"],"target":"Proteasome","modality":"Proteasome inhibitor"},
+    {"name":"Ixazomib","aliases":["ixazomib","ninlaro","mln9708"],"target":"Proteasome","modality":"Proteasome inhibitor"},
+    {"name":"Selinexor","aliases":["selinexor","xpovio","kpt-330"],"target":"XPO1","modality":"Small molecule"},
+    {"name":"Venetoclax","aliases":["venetoclax","venclexta","abt-199"],"target":"BCL-2","modality":"Small molecule"},
+    {"name":"Dexamethasone","aliases":["dexamethasone"],"target":"Glucocorticoid receptor","modality":"Corticosteroid"},
+    {"name":"Cyclophosphamide","aliases":["cyclophosphamide","cytoxan"],"target":"DNA alkylation","modality":"Chemotherapy"},
+    {"name":"Melphalan","aliases":["melphalan","evomela","alkeran"],"target":"DNA alkylation","modality":"Chemotherapy"}
+  ],
+  "target_rules": [
+    {"pattern":"bcma|b-cell maturation antigen","value":"BCMA"},{"pattern":"gprc5d","value":"GPRC5D"},{"pattern":"fcrh5|fc rh5","value":"FcRH5"},{"pattern":"cd38","value":"CD38"},{"pattern":"slamf7|cs1","value":"SLAMF7"},{"pattern":"cereblon|celmod","value":"Cereblon"},{"pattern":"xpo1","value":"XPO1"},{"pattern":"bcl-2|bcl2","value":"BCL-2"}
+  ],
+  "modality_rules": [
+    {"pattern":"car[- ]?t|chimeric antigen receptor","value":"CAR-T cell therapy"},{"pattern":"bispecific|cd3","value":"Bispecific antibody"},{"pattern":"antibody.drug conjugate|\badc\b","value":"Antibody–drug conjugate"},{"pattern":"monoclonal antibody|mab$","value":"Monoclonal antibody"},{"pattern":"vaccine","value":"Vaccine"}
+  ]
+}
