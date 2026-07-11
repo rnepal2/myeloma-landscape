@@ -2,6 +2,8 @@
 
 A source-linked public intelligence application for tracking multiple myeloma trials, assets, sponsors, targets and indication-level regulatory milestones.
 
+The frontend uses React, TypeScript, React Router, Tailwind CSS, and Vite. All production data is precomputed so the deployed application remains a static Cloudflare Worker asset bundle.
+
 ## What is included
 
 - Live ClinicalTrials.gov API v2 ingestion
@@ -29,6 +31,21 @@ npm run dev
 ```
 
 The Python pipeline uses only the standard library. Generated application data lives in `public/data/`; each refresh compares against the currently accepted file before replacing it.
+
+## Frontend structure
+
+```text
+src/
+  app/          navigation and app-level configuration
+  components/   reusable layout, intelligence, trial, and UI components
+  context/      shared validated application data
+  layouts/      route layouts
+  lib/          formatting and shared utilities
+  pages/        isolated route-level product surfaces
+  App.tsx       route assembly only
+```
+
+Component styling uses colocated Tailwind utility classes. `src/index.css` contains only the Tailwind import; there is no project-specific global CSS layer.
 
 ## Quality checks
 

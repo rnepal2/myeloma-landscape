@@ -33,7 +33,7 @@ LABEL_DRUGS = ["daratumumab", "isatuximab", "teclistamab", "belantamab mafodotin
 QUERY = '"Multiple Myeloma"'
 FIELDS = "|".join([
     "NCTId", "BriefTitle", "BriefSummary", "OverallStatus", "Phase", "StudyType",
-    "LeadSponsorName", "CollaboratorName", "InterventionName", "InterventionType",
+    "LeadSponsorName", "LeadSponsorClass", "CollaboratorName", "InterventionName", "InterventionType",
     "Condition", "StartDate", "PrimaryCompletionDate", "CompletionDate", "EnrollmentCount",
     "LocationCity", "LocationState", "LocationCountry", "HasResults", "StudyFirstPostDate",
     "LastUpdatePostDate",
@@ -341,7 +341,11 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
     modality_rows = [{"modality":m, "activeTrials":len(modality_trials[m]), "activeAssets":len(modality_assets[m]), "sponsors":len(modality_sponsors[m])} for m in set(modality_trials) | set(modality_assets)]
     modality_rows.sort(key=lambda x: (-x["activeTrials"], x["modality"]))
     sponsor_counts = Counter(t["sponsor"] for t in active)
-    top_sponsors = [{"name":k,"activeTrials":v,"share":round(100*v/len(active),1)} for k,v in sponsor_counts.most_common(12)]
+    sponsor_classes = {t["sponsor"]: t.get("sponsorClass", "OTHER") for t in active}
+    sponsor_rows = [{"name":k,"sponsorClass":sponsor_classes.get(k,"OTHER"),"activeTrials":v,"share":round(100*v/len(active),1)} for k,v in sponsor_counts.most_common()]
+    top_sponsors = sponsor_rows[:20]
+    industry_sponsors = [x for x in sponsor_rows if x["sponsorClass"] == "INDUSTRY"][:10]
+    institution_sponsors = [x for x in sponsor_rows if x["sponsorClass"] != "INDUSTRY"][:10]
     top5_share = round(100 * sum(v for _,v in sponsor_counts.most_common(5)) / max(1,len(active)), 1)
     country_rows = [{"country":k,"activeTrials":len(v)} for k,v in country_trials.items()]
     country_rows.sort(key=lambda x:(-x["activeTrials"],x["country"]))
@@ -357,12 +361,12 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
     signals = [
         {"id":"target-crowding","theme":"Competitive intensity","metric":f"{crowded['activeTrials']} active trials","title":f"{crowded['target']} is the most crowded target family","detail":f"{crowded['activeAssets']} active assets across {crowded['sponsors']} registry sponsors create the highest composite crowding score ({crowded['crowdingScore']}/100).","tone":"amber"},
         {"id":"translation-gap","theme":"White-space watch","metric":f"{opportunity['recentPublications']} papers · {opportunity['recentGrants']} grants","title":f"{opportunity['target']} shows research activity relative to clinical crowding","detail":f"The recent evidence/funding sample compares with {opportunity['activeTrials']} active trials. This is a screening signal, not an attractiveness recommendation.","tone":"teal"},
-        {"id":"sponsor-concentration","theme":"Market structure","metric":f"{top5_share}% of active trials","title":"The five most active sponsors hold a meaningful share of execution","detail":f"{len(sponsor_counts)} sponsors are represented across active interventional studies, but activity remains concentrated at the top.","tone":"blue"},
+        {"id":"sponsor-concentration","theme":"Sponsor structure","metric":f"{top5_share}% of active trials","title":"Lead-sponsor activity is distributed beyond the largest organizations" if top5_share < 35 else "Lead-sponsor activity is concentrated among the largest organizations","detail":f"The five most active lead sponsors account for {top5_share}% of active interventional studies across {len(sponsor_counts)} registered sponsors. Sponsor class should be considered when interpreting competitive position.","tone":"blue"},
         {"id":"catalyst-window","theme":"Catalyst horizon","metric":f"{len(late_stage)} Phase 3 milestones","title":"Late-stage primary completions cluster inside the next 18 months","detail":"Registry dates are sponsor estimates; the catalyst list should be monitored for timing and status changes.","tone":"purple"},
         {"id":"global-footprint","theme":"Trial execution","metric":f"{len(country_rows)} countries","title":"Active development has a broad global footprint","detail":f"The United States leads with {country_rows[0]['activeTrials'] if country_rows else 0} active studies with at least one registered site; geography reflects registry location completeness.","tone":"blue"},
         {"id":"supply-watch","theme":"Operational watch","metric":f"{unavailable} unavailable presentations","title":"Current FDA oncology shortage records intersect the myeloma regimen map","detail":"Availability is presentation- and manufacturer-specific and should not be generalized to an entire active ingredient.","tone":"red"}
     ]
-    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"executiveSignals":signals,"methodology":"Cross-source signals are deterministic screening metrics derived from active ClinicalTrials.gov records, recent PubMed citations, NIH awards, FDA events/shortages, DailyMed labels and EMA medicine records. They are not forecasts, rankings of clinical value or commercial recommendations."}
+    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"industrySponsors":industry_sponsors,"institutionSponsors":institution_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"executiveSignals":signals,"methodology":"Cross-source signals are deterministic screening metrics derived from active ClinicalTrials.gov records, recent PubMed citations, NIH awards, FDA events/shortages, DailyMed labels and EMA medicine records. They are not forecasts, rankings of clinical value or commercial recommendations."}
 
 
 def compact_date(module: dict, key: str) -> str | None:
@@ -433,6 +437,7 @@ def normalize(raw: dict) -> dict:
     return {
         "nctId": nct_id, "title": title, "status": status.get("overallStatus", "UNKNOWN"),
         "phases": design.get("phases", ["NA"]), "sponsor": (sponsor.get("leadSponsor") or {}).get("name", "Not reported"),
+        "sponsorClass": (sponsor.get("leadSponsor") or {}).get("class", "OTHER"),
         "collaborators": [x.get("name") for x in sponsor.get("collaborators", []) if x.get("name")],
         "interventions": interventions, "conditions": conditions.get("conditions", []),
         "startDate": compact_date(status, "startDateStruct"),

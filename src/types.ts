@@ -1,140 +1,225 @@
 export type Trial = {
-  nctId: string
-  title: string
-  status: string
-  phases: string[]
-  sponsor: string
-  collaborators: string[]
-  interventions: { name: string; canonicalName: string; type: string; target?: string; modality?: string }[]
-  conditions: string[]
-  startDate?: string
-  primaryCompletionDate?: string
-  completionDate?: string
-  enrollment?: number
-  studyType: string
-  hasResults: boolean
-  locations: { city?: string; state?: string; country?: string }[]
-  briefSummary?: string
-  firstPosted?: string
-  lastUpdated?: string
-  setting: string
-  sourceUrl: string
-}
+  nctId: string;
+  title: string;
+  status: string;
+  phases: string[];
+  sponsor: string;
+  sponsorClass: string;
+  collaborators: string[];
+  interventions: {
+    name: string;
+    canonicalName: string;
+    type: string;
+    target?: string;
+    modality?: string;
+  }[];
+  conditions: string[];
+  startDate?: string;
+  primaryCompletionDate?: string;
+  completionDate?: string;
+  enrollment?: number;
+  studyType: string;
+  hasResults: boolean;
+  locations: { city?: string; state?: string; country?: string }[];
+  briefSummary?: string;
+  firstPosted?: string;
+  lastUpdated?: string;
+  setting: string;
+  sourceUrl: string;
+};
 
 export type Asset = {
-  id: string
-  name: string
-  aliases: string[]
-  target: string
-  modality: string
-  trialCount: number
-  activeTrialCount: number
-  recruitingTrialCount: number
-  highestPhase: string
-  sponsors: string[]
-  settings: string[]
-  statusCounts: Record<string, number>
-  trialIds: string[]
-}
+  id: string;
+  name: string;
+  aliases: string[];
+  target: string;
+  modality: string;
+  trialCount: number;
+  activeTrialCount: number;
+  recruitingTrialCount: number;
+  highestPhase: string;
+  sponsors: string[];
+  settings: string[];
+  statusCounts: Record<string, number>;
+  trialIds: string[];
+};
 
 export type Summary = {
-  generatedAt: string
-  sourceRetrievedAt: string
-  datasetVersion: string
-  trialCount: number
-  activeTrialCount: number
-  recruitingTrialCount: number
-  phase23ActiveCount: number
-  assetCount: number
-  sponsorCount: number
-  resultsTrialCount: number
-  countsByPhase: { name: string; value: number }[]
-  countsByStatus: { name: string; value: number }[]
-  countsByTarget: { name: string; value: number }[]
-  countsByModality: { name: string; value: number }[]
-  topSponsors: { name: string; value: number }[]
-  upcomingMilestones: { nctId: string; title: string; date: string; phase: string; sponsor: string }[]
-  methodology: { query: string; scope: string; source: string }
-}
+  generatedAt: string;
+  sourceRetrievedAt: string;
+  datasetVersion: string;
+  trialCount: number;
+  activeTrialCount: number;
+  recruitingTrialCount: number;
+  phase23ActiveCount: number;
+  assetCount: number;
+  sponsorCount: number;
+  resultsTrialCount: number;
+  countsByPhase: { name: string; value: number }[];
+  countsByStatus: { name: string; value: number }[];
+  countsByTarget: { name: string; value: number }[];
+  countsByModality: { name: string; value: number }[];
+  topSponsors: { name: string; value: number }[];
+  upcomingMilestones: {
+    nctId: string;
+    title: string;
+    date: string;
+    phase: string;
+    sponsor: string;
+  }[];
+  methodology: { query: string; scope: string; source: string };
+};
 
 export type ChangeEvent = {
-  id: string
-  type: string
-  severity: 'high' | 'medium' | 'low'
-  title: string
-  detail: string
-  date: string
-  nctId?: string
-  sourceUrl: string
-  observedAt: string
-}
+  id: string;
+  type: string;
+  severity: "high" | "medium" | "low";
+  title: string;
+  detail: string;
+  date: string;
+  nctId?: string;
+  sourceUrl: string;
+  observedAt: string;
+};
 
 export type RegulatoryEvent = {
-  id: string
-  date: string
-  asset: string
-  title: string
-  detail: string
-  target: string
-  eventType: string
-  sourceUrl: string
-}
+  id: string;
+  date: string;
+  asset: string;
+  title: string;
+  detail: string;
+  target: string;
+  eventType: string;
+  sourceUrl: string;
+};
 
 export type Publication = {
-  pmid: string
-  title: string
-  date: string
-  journal: string
-  authors: string[]
-  doi?: string
-  linkedAssets: string[]
-  linkedTargets: string[]
-  sourceUrl: string
-}
+  pmid: string;
+  title: string;
+  date: string;
+  journal: string;
+  authors: string[];
+  doi?: string;
+  linkedAssets: string[];
+  linkedTargets: string[];
+  sourceUrl: string;
+};
 
 export type Evidence = {
-  generatedAt: string
-  query: string
-  totalCount: number
-  sampleSize: number
-  countsByYear: { name: string; value: number }[]
-  targetMomentum: { name: string; value: number }[]
-  topJournals: { name: string; value: number }[]
-  publications: Publication[]
-  grantCount: number
+  generatedAt: string;
+  query: string;
+  totalCount: number;
+  sampleSize: number;
+  countsByYear: { name: string; value: number }[];
+  targetMomentum: { name: string; value: number }[];
+  topJournals: { name: string; value: number }[];
+  publications: Publication[];
+  grantCount: number;
   grants: {
-    id: string
-    title: string
-    organization: string
-    projectNumber?: string
-    fiscalYear: number
-    awardAmount: number
-    awardDate: string
-    principalInvestigators: string[]
-    sourceUrl: string
-  }[]
-  grantAwardsByYear: { name: string; value: number }[]
-  methodology: string
-}
+    id: string;
+    title: string;
+    organization: string;
+    projectNumber?: string;
+    fiscalYear: number;
+    awardAmount: number;
+    awardDate: string;
+    principalInvestigators: string[];
+    sourceUrl: string;
+  }[];
+  grantAwardsByYear: { name: string; value: number }[];
+  methodology: string;
+};
 
 export type MarketContext = {
-  generatedAt: string
-  emaSourceUpdatedAt?: string
-  shortageSourceUpdatedAt?: string
-  methodology: string
-  dailyMedLabels: { asset: string; title: string; publishedDate: string; version: number; setId: string; sourceUrl: string }[]
-  emaMedicines: { name: string; activeSubstance: string; status: string; lastUpdated: string; holder?: string; orphan: boolean; conditional: boolean; advancedTherapy: boolean; sourceUrl: string }[]
-  shortages: { asset: string; genericName: string; availability: string; company: string; dosageForm?: string; updatedDate: string; reason?: string; presentation?: string; sourceUrl: string }[]
-}
+  generatedAt: string;
+  emaSourceUpdatedAt?: string;
+  shortageSourceUpdatedAt?: string;
+  methodology: string;
+  dailyMedLabels: {
+    asset: string;
+    title: string;
+    publishedDate: string;
+    version: number;
+    setId: string;
+    sourceUrl: string;
+  }[];
+  emaMedicines: {
+    name: string;
+    activeSubstance: string;
+    status: string;
+    lastUpdated: string;
+    holder?: string;
+    orphan: boolean;
+    conditional: boolean;
+    advancedTherapy: boolean;
+    sourceUrl: string;
+  }[];
+  shortages: {
+    asset: string;
+    genericName: string;
+    availability: string;
+    company: string;
+    dosageForm?: string;
+    updatedDate: string;
+    reason?: string;
+    presentation?: string;
+    sourceUrl: string;
+  }[];
+};
 
 export type StrategicIntelligence = {
-  generatedAt: string
-  targetLandscape: { target: string; activeTrials: number; recruitingTrials: number; phase3Trials: number; activeAssets: number; sponsors: number; recentPublications: number; recentGrants: number; crowdingScore: number }[]
-  modalityLandscape: { modality: string; activeTrials: number; activeAssets: number; sponsors: number }[]
-  topSponsors: { name: string; activeTrials: number; share: number }[]
-  top5SponsorShare: number
-  geographicFootprint: { country: string; activeTrials: number }[]
-  lateStageMilestones: { nctId: string; title: string; date: string; phase: string; sponsor: string }[]
-  executiveSignals: { id: string; theme: string; metric: string; title: string; detail: string; tone: string }[]
-  methodology: string
-}
+  generatedAt: string;
+  targetLandscape: {
+    target: string;
+    activeTrials: number;
+    recruitingTrials: number;
+    phase3Trials: number;
+    activeAssets: number;
+    sponsors: number;
+    recentPublications: number;
+    recentGrants: number;
+    crowdingScore: number;
+  }[];
+  modalityLandscape: {
+    modality: string;
+    activeTrials: number;
+    activeAssets: number;
+    sponsors: number;
+  }[];
+  topSponsors: {
+    name: string;
+    sponsorClass: string;
+    activeTrials: number;
+    share: number;
+  }[];
+  industrySponsors: {
+    name: string;
+    sponsorClass: string;
+    activeTrials: number;
+    share: number;
+  }[];
+  institutionSponsors: {
+    name: string;
+    sponsorClass: string;
+    activeTrials: number;
+    share: number;
+  }[];
+  top5SponsorShare: number;
+  geographicFootprint: { country: string; activeTrials: number }[];
+  lateStageMilestones: {
+    nctId: string;
+    title: string;
+    date: string;
+    phase: string;
+    sponsor: string;
+  }[];
+  executiveSignals: {
+    id: string;
+    theme: string;
+    metric: string;
+    title: string;
+    detail: string;
+    tone: string;
+  }[];
+  methodology: string;
+};

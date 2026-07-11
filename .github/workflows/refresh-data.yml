@@ -29,7 +29,9 @@ jobs:
       - run: npm ci
       - run: python scripts/refresh_data.py
       - run: python scripts/validate_data.py
+      - run: npm run format:check
       - run: npm test
+      - run: npm run typecheck
       - run: npm run build
       - name: Commit accepted snapshot
         run: |

@@ -16,7 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run data:check
+      - run: npm run format:check
       - run: npm test
+      - run: npm run typecheck
       - run: npm run build
       - run: npx wrangler deploy
         env:

@@ -20,6 +20,7 @@ def main():
     if len(trials) < 1000: fail(f"unexpected trial count {len(trials)}")
     ids = [t.get("nctId") for t in trials]
     if len(ids) != len(set(ids)) or None in ids: fail("NCT IDs are missing or duplicated")
+    if any(not t.get("sponsorClass") for t in trials): fail("trial sponsor class missing")
     if summary["trialCount"] != len(trials): fail("summary trial count mismatch")
     if summary["assetCount"] != len(assets): fail("summary asset count mismatch")
     if not summary.get("datasetVersion") or not summary.get("sourceRetrievedAt"): fail("missing provenance")
@@ -38,7 +39,9 @@ def main():
     if not market.get("shortageSourceUpdatedAt"): fail("FDA shortage provenance incomplete")
     strategic = payload["strategic"]
     if len(strategic.get("targetLandscape", [])) < 5 or len(strategic.get("executiveSignals", [])) < 5: fail("strategic intelligence incomplete")
-    if not strategic.get("geographicFootprint") or not strategic.get("topSponsors"): fail("strategic landscape cuts incomplete")
+    if not strategic.get("geographicFootprint") or not strategic.get("topSponsors") or not strategic.get("industrySponsors") or not strategic.get("institutionSponsors"): fail("strategic landscape cuts incomplete")
+    if any(x.get("sponsorClass") != "INDUSTRY" for x in strategic["industrySponsors"]): fail("industry sponsor classification invalid")
+    if any(x.get("sponsorClass") == "INDUSTRY" for x in strategic["institutionSponsors"]): fail("institution sponsor classification invalid")
     print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(payload['changes'])} signals, {evidence['sampleSize']} publications, {evidence['grantCount']} grants, {len(market['dailyMedLabels'])} labels, {len(market['emaMedicines'])} EMA records, {len(strategic['targetLandscape'])} target families")
 
 if __name__ == "__main__": main()
