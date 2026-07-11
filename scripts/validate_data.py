@@ -9,7 +9,7 @@ def fail(message):
     raise SystemExit(f"DATA VALIDATION FAILED: {message}")
 
 def main():
-    required = ["summary", "trials", "assets", "changes", "regulatory", "evidence"]
+    required = ["summary", "trials", "assets", "changes", "regulatory", "evidence", "market-context", "strategic"]
     payload = {}
     for name in required:
         path = DATA / f"{name}.json"
@@ -32,6 +32,13 @@ def main():
     if any(not p.get("pmid") or not p.get("sourceUrl") for p in evidence["publications"]): fail("PubMed evidence provenance incomplete")
     if evidence.get("grantCount", 0) < 25 or not evidence.get("grants"): fail("NIH RePORTER snapshot incomplete")
     if any(not g.get("id") or not g.get("sourceUrl") for g in evidence["grants"]): fail("NIH grant provenance incomplete")
-    print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(payload['changes'])} signals, {evidence['sampleSize']} publications, {evidence['grantCount']} grants")
+    market = payload["market-context"]
+    if len(market.get("dailyMedLabels", [])) < 10: fail("DailyMed label snapshot incomplete")
+    if len(market.get("emaMedicines", [])) < 20: fail("EMA medicine snapshot incomplete")
+    if not market.get("shortageSourceUpdatedAt"): fail("FDA shortage provenance incomplete")
+    strategic = payload["strategic"]
+    if len(strategic.get("targetLandscape", [])) < 5 or len(strategic.get("executiveSignals", [])) < 5: fail("strategic intelligence incomplete")
+    if not strategic.get("geographicFootprint") or not strategic.get("topSponsors"): fail("strategic landscape cuts incomplete")
+    print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(payload['changes'])} signals, {evidence['sampleSize']} publications, {evidence['grantCount']} grants, {len(market['dailyMedLabels'])} labels, {len(market['emaMedicines'])} EMA records, {len(strategic['targetLandscape'])} target families")
 
 if __name__ == "__main__": main()

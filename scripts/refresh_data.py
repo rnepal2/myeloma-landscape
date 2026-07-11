@@ -26,6 +26,10 @@ API = "https://clinicaltrials.gov/api/v2/studies"
 FDA_ONCOLOGY = "https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 NIH_REPORTER = "https://api.reporter.nih.gov/v2/projects/search"
+DAILYMED_SPLS = "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json"
+EMA_MEDICINES = "https://www.ema.europa.eu/en/documents/report/medicines-output-medicines_json-report_en.json"
+FDA_SHORTAGES = "https://api.fda.gov/drug/shortages.json"
+LABEL_DRUGS = ["daratumumab", "isatuximab", "teclistamab", "belantamab mafodotin", "ciltacabtagene autoleucel", "idecabtagene vicleucel", "elranatamab", "talquetamab", "bortezomib", "carfilzomib", "lenalidomide", "pomalidomide", "selinexor", "ixazomib", "elotuzumab", "melphalan"]
 QUERY = '"Multiple Myeloma"'
 FIELDS = "|".join([
     "NCTId", "BriefTitle", "BriefSummary", "OverallStatus", "Phase", "StudyType",
@@ -208,6 +212,159 @@ def fetch_pubmed_evidence() -> dict:
     }
 
 
+def parse_human_date(value: str) -> str:
+    for pattern in ("%b %d, %Y", "%d/%m/%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(value, pattern).date().isoformat()
+        except (TypeError, ValueError):
+            pass
+    return value or ""
+
+
+def fetch_market_context() -> dict:
+    labels, seen_setids = [], set()
+    for drug in LABEL_DRUGS:
+        payload = fetch_json(f"{DAILYMED_SPLS}?{urllib.parse.urlencode({'drug_name':drug,'pagesize':'5'})}")
+        for item in payload.get("data", []):
+            setid = item.get("setid")
+            if not setid or setid in seen_setids:
+                continue
+            seen_setids.add(setid)
+            labels.append({
+                "asset": classify_intervention(drug, "DRUG")["canonicalName"], "title": item.get("title", drug),
+                "publishedDate": parse_human_date(item.get("published_date", "")), "version": item.get("spl_version"),
+                "setId": setid, "sourceUrl": f"https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid={setid}"
+            })
+        time.sleep(0.15)
+    labels.sort(key=lambda x: x["publishedDate"], reverse=True)
+
+    ema_payload = fetch_json(EMA_MEDICINES)
+    ema_records = []
+    for item in ema_payload.get("data", []):
+        indication = item.get("therapeutic_indication") or ""
+        area = item.get("therapeutic_area_mesh") or ""
+        if "multiple myeloma" not in indication.lower() and "plasma cell myeloma" not in area.lower():
+            continue
+        ema_records.append({
+            "name": item.get("name_of_medicine"), "activeSubstance": item.get("international_non_proprietary_name_common_name") or item.get("active_substance"),
+            "status": item.get("medicine_status"), "lastUpdated": parse_human_date(item.get("last_updated_date", "")),
+            "holder": item.get("marketing_authorisation_developer_applicant_holder"), "orphan": item.get("orphan_medicine") == "Yes",
+            "conditional": item.get("conditional_approval") == "Yes", "advancedTherapy": item.get("advanced_therapy") == "Yes",
+            "sourceUrl": item.get("medicine_url"),
+        })
+    ema_records.sort(key=lambda x: x["lastUpdated"], reverse=True)
+
+    shortage_query = 'status:"Current" AND therapeutic_category:"Oncology"'
+    shortage_payload = fetch_json(f"{FDA_SHORTAGES}?{urllib.parse.urlencode({'search':shortage_query,'limit':'100'})}")
+    alias_terms = sorted({alias for asset in ONTOLOGY["assets"] for alias in asset["aliases"] if len(alias) >= 5}, key=len, reverse=True)
+    shortages = []
+    for item in shortage_payload.get("results", []):
+        generic = item.get("generic_name", "")
+        lower = generic.lower()
+        match = next((alias for alias in alias_terms if alias in lower), None)
+        if not match:
+            continue
+        classified = classify_intervention(match, "DRUG")
+        shortages.append({
+            "asset": classified["canonicalName"], "genericName": generic, "availability": item.get("availability", "Not reported"),
+            "company": item.get("company_name", "Not reported"), "dosageForm": item.get("dosage_form"),
+            "updatedDate": parse_human_date(item.get("update_date", "")), "reason": item.get("shortage_reason"),
+            "presentation": item.get("presentation"), "sourceUrl": "https://dps.fda.gov/drugshortages"
+        })
+    shortages.sort(key=lambda x: x["updatedDate"], reverse=True)
+    shortages.sort(key=lambda x: 0 if "unavailable" in x["availability"].lower() else 1 if "limited" in x["availability"].lower() else 2)
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "dailyMedLabels": labels, "emaMedicines": ema_records, "shortages": shortages,
+        "emaSourceUpdatedAt": ema_payload.get("meta", {}).get("timestamp"),
+        "shortageSourceUpdatedAt": shortage_payload.get("meta", {}).get("last_updated"),
+        "methodology": "DailyMed labels are matched through a reviewed therapy list. EMA records require multiple myeloma in the therapeutic indication or plasma cell myeloma in the therapeutic area. FDA shortage records are limited to current oncology records matching reviewed therapy aliases; availability is presentation-specific."
+    }
+
+
+def target_family(value: str | None) -> str | None:
+    if not value or value == "Unclassified":
+        return None
+    for family in ("BCMA", "GPRC5D", "FcRH5", "CD38", "Cereblon", "Proteasome", "XPO1", "BCL-2", "SLAMF7"):
+        if value.startswith(family):
+            return family
+    return value
+
+
+def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary: dict, evidence: dict, market: dict, regulatory: list[dict], now: str) -> dict:
+    active = [t for t in trials if t["studyType"] == "INTERVENTIONAL" and t["status"] in ACTIVE]
+    target_trials, target_recruiting, target_phase3 = defaultdict(set), defaultdict(set), defaultdict(set)
+    target_sponsors, country_trials = defaultdict(set), defaultdict(set)
+    modality_trials, modality_assets, modality_sponsors = defaultdict(set), defaultdict(set), defaultdict(set)
+    for trial in active:
+        families, modalities = set(), set()
+        for intervention in trial["interventions"]:
+            family = target_family(intervention.get("target"))
+            if family: families.add(family)
+            modality = intervention.get("modality")
+            if modality and modality not in {"Drug", "Biological", "Unclassified"}: modalities.add(modality)
+        for family in families:
+            target_trials[family].add(trial["nctId"]); target_sponsors[family].add(trial["sponsor"])
+            if trial["status"] == "RECRUITING": target_recruiting[family].add(trial["nctId"])
+            if "PHASE3" in trial["phases"]: target_phase3[family].add(trial["nctId"])
+        for modality in modalities:
+            modality_trials[modality].add(trial["nctId"]); modality_sponsors[modality].add(trial["sponsor"])
+        for location in trial["locations"]:
+            if location.get("country"): country_trials[location["country"]].add(trial["nctId"])
+    target_assets = defaultdict(set)
+    for asset in assets:
+        if asset["activeTrialCount"] <= 0: continue
+        family = target_family(asset.get("target"))
+        if family: target_assets[family].add(asset["id"])
+        modality = asset.get("modality")
+        if modality and modality not in {"Drug", "Biological", "Unclassified"}: modality_assets[modality].add(asset["id"])
+    evidence_targets = Counter(target_family(t) for pub in evidence["publications"] for t in set(pub["linkedTargets"]))
+    evidence_targets.pop(None, None)
+    grant_targets = Counter()
+    for grant in evidence["grants"]:
+        lower = grant["title"].lower(); matched = set()
+        for asset in ONTOLOGY["assets"]:
+            if any(alias in lower for alias in asset["aliases"]): matched.add(target_family(asset["target"]))
+        for rule in ONTOLOGY["target_rules"]:
+            if re.search(rule["pattern"], lower, re.I): matched.add(target_family(rule["value"]))
+        grant_targets.update(x for x in matched if x)
+    target_rows = []
+    all_targets = set(target_trials) | set(target_assets) | set(evidence_targets) | set(grant_targets)
+    max_trials = max((len(x) for x in target_trials.values()), default=1)
+    max_assets = max((len(x) for x in target_assets.values()), default=1)
+    max_sponsors = max((len(x) for x in target_sponsors.values()), default=1)
+    for target in all_targets:
+        trials_n, assets_n, sponsors_n = len(target_trials[target]), len(target_assets[target]), len(target_sponsors[target])
+        crowding = round(100 * (0.5 * trials_n / max_trials + 0.3 * assets_n / max_assets + 0.2 * sponsors_n / max_sponsors))
+        target_rows.append({"target":target, "activeTrials":trials_n, "recruitingTrials":len(target_recruiting[target]), "phase3Trials":len(target_phase3[target]), "activeAssets":assets_n, "sponsors":sponsors_n, "recentPublications":evidence_targets[target], "recentGrants":grant_targets[target], "crowdingScore":crowding})
+    target_rows.sort(key=lambda x: (-x["crowdingScore"], x["target"]))
+    modality_rows = [{"modality":m, "activeTrials":len(modality_trials[m]), "activeAssets":len(modality_assets[m]), "sponsors":len(modality_sponsors[m])} for m in set(modality_trials) | set(modality_assets)]
+    modality_rows.sort(key=lambda x: (-x["activeTrials"], x["modality"]))
+    sponsor_counts = Counter(t["sponsor"] for t in active)
+    top_sponsors = [{"name":k,"activeTrials":v,"share":round(100*v/len(active),1)} for k,v in sponsor_counts.most_common(12)]
+    top5_share = round(100 * sum(v for _,v in sponsor_counts.most_common(5)) / max(1,len(active)), 1)
+    country_rows = [{"country":k,"activeTrials":len(v)} for k,v in country_trials.items()]
+    country_rows.sort(key=lambda x:(-x["activeTrials"],x["country"]))
+    today = datetime.fromisoformat(now.replace("Z", "+00:00")).date()
+    cutoff = today.replace(year=today.year + 1) if not (today.month == 2 and today.day == 29) else today.replace(year=today.year + 1, day=28)
+    cutoff = cutoff.replace(month=min(12, cutoff.month + 6)) if cutoff.month <= 6 else cutoff.replace(year=cutoff.year + 1, month=cutoff.month - 6)
+    late_stage = [x for x in summary["upcomingMilestones"] if x["phase"] == "PHASE3" and x["date"] <= cutoff.isoformat()]
+    opportunity_candidates = [x for x in target_rows if x["recentPublications"] + x["recentGrants"] >= 2]
+    opportunity_candidates.sort(key=lambda x: -((x["recentPublications"] + 2*x["recentGrants"]) / (x["activeTrials"] + 1)))
+    opportunity = opportunity_candidates[0] if opportunity_candidates else target_rows[-1]
+    crowded = target_rows[0]
+    unavailable = sum("unavailable" in x["availability"].lower() for x in market["shortages"])
+    signals = [
+        {"id":"target-crowding","theme":"Competitive intensity","metric":f"{crowded['activeTrials']} active trials","title":f"{crowded['target']} is the most crowded target family","detail":f"{crowded['activeAssets']} active assets across {crowded['sponsors']} registry sponsors create the highest composite crowding score ({crowded['crowdingScore']}/100).","tone":"amber"},
+        {"id":"translation-gap","theme":"White-space watch","metric":f"{opportunity['recentPublications']} papers · {opportunity['recentGrants']} grants","title":f"{opportunity['target']} shows research activity relative to clinical crowding","detail":f"The recent evidence/funding sample compares with {opportunity['activeTrials']} active trials. This is a screening signal, not an attractiveness recommendation.","tone":"teal"},
+        {"id":"sponsor-concentration","theme":"Market structure","metric":f"{top5_share}% of active trials","title":"The five most active sponsors hold a meaningful share of execution","detail":f"{len(sponsor_counts)} sponsors are represented across active interventional studies, but activity remains concentrated at the top.","tone":"blue"},
+        {"id":"catalyst-window","theme":"Catalyst horizon","metric":f"{len(late_stage)} Phase 3 milestones","title":"Late-stage primary completions cluster inside the next 18 months","detail":"Registry dates are sponsor estimates; the catalyst list should be monitored for timing and status changes.","tone":"purple"},
+        {"id":"global-footprint","theme":"Trial execution","metric":f"{len(country_rows)} countries","title":"Active development has a broad global footprint","detail":f"The United States leads with {country_rows[0]['activeTrials'] if country_rows else 0} active studies with at least one registered site; geography reflects registry location completeness.","tone":"blue"},
+        {"id":"supply-watch","theme":"Operational watch","metric":f"{unavailable} unavailable presentations","title":"Current FDA oncology shortage records intersect the myeloma regimen map","detail":"Availability is presentation- and manufacturer-specific and should not be generalized to an entire active ingredient.","tone":"red"}
+    ]
+    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"executiveSignals":signals,"methodology":"Cross-source signals are deterministic screening metrics derived from active ClinicalTrials.gov records, recent PubMed citations, NIH awards, FDA events/shortages, DailyMed labels and EMA medicine records. They are not forecasts, rankings of clinical value or commercial recommendations."}
+
+
 def compact_date(module: dict, key: str) -> str | None:
     return (module.get(key) or {}).get("date")
 
@@ -388,6 +545,17 @@ def main() -> None:
         if not (OUT / "evidence.json").exists():
             raise
         print(f"PubMed refresh warning; retaining accepted evidence snapshot: {exc}", file=sys.stderr)
+    try:
+        market_context = fetch_market_context()
+        write_json(OUT / "market-context.json", market_context)
+    except Exception as exc:
+        if not (OUT / "market-context.json").exists():
+            raise
+        print(f"Market-context refresh warning; retaining accepted snapshot: {exc}", file=sys.stderr)
+    evidence = json.loads((OUT / "evidence.json").read_text())
+    market_context = json.loads((OUT / "market-context.json").read_text())
+    strategic = build_strategic_intelligence(trials, assets, summary, evidence, market_context, regulatory, now)
+    write_json(OUT / "strategic.json", strategic)
     print(f"Built {len(trials):,} trials, {len(assets):,} assets, version {version}")
 
 

@@ -116,3 +116,25 @@ export type Evidence = {
   grantAwardsByYear: { name: string; value: number }[]
   methodology: string
 }
+
+export type MarketContext = {
+  generatedAt: string
+  emaSourceUpdatedAt?: string
+  shortageSourceUpdatedAt?: string
+  methodology: string
+  dailyMedLabels: { asset: string; title: string; publishedDate: string; version: number; setId: string; sourceUrl: string }[]
+  emaMedicines: { name: string; activeSubstance: string; status: string; lastUpdated: string; holder?: string; orphan: boolean; conditional: boolean; advancedTherapy: boolean; sourceUrl: string }[]
+  shortages: { asset: string; genericName: string; availability: string; company: string; dosageForm?: string; updatedDate: string; reason?: string; presentation?: string; sourceUrl: string }[]
+}
+
+export type StrategicIntelligence = {
+  generatedAt: string
+  targetLandscape: { target: string; activeTrials: number; recruitingTrials: number; phase3Trials: number; activeAssets: number; sponsors: number; recentPublications: number; recentGrants: number; crowdingScore: number }[]
+  modalityLandscape: { modality: string; activeTrials: number; activeAssets: number; sponsors: number }[]
+  topSponsors: { name: string; activeTrials: number; share: number }[]
+  top5SponsorShare: number
+  geographicFootprint: { country: string; activeTrials: number }[]
+  lateStageMilestones: { nctId: string; title: string; date: string; phase: string; sponsor: string }[]
+  executiveSignals: { id: string; theme: string; metric: string; title: string; detail: string; tone: string }[]
+  methodology: string
+}

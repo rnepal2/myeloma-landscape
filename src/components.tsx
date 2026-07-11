@@ -1,4 +1,4 @@
-import { ArrowUpRight, CheckCircle2, CircleDot, ExternalLink, Info, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, CircleDot, ExternalLink, Info, Search, SlidersHorizontal, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import { cx, prettyEnum, shortDate } from './lib'
@@ -69,3 +69,15 @@ export function FilterButton({ children }: { children: ReactNode }) { return <bu
 
 export function Verified() { return <span className="verified"><CheckCircle2 size={14} />Source linked</span> }
 export function InlineLink({ href, children }: { href: string; children: ReactNode }) { return <a href={href} target="_blank" rel="noreferrer" className="inline-link">{children}<ArrowUpRight size={13} /></a> }
+
+export function Pagination({ page, total, pageSize, onPage, label }: { page: number; total: number; pageSize: number; onPage: (page: number) => void; label: string }) {
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  if (pages <= 1) return null
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(total, page * pageSize)
+  return <nav className="pagination" aria-label={`${label} pagination`}><span>{start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()} {label}</span><div><button onClick={() => onPage(page - 1)} disabled={page === 1} aria-label="Previous page"><ArrowLeft size={15} /> Previous</button><strong>Page {page} of {pages}</strong><button onClick={() => onPage(page + 1)} disabled={page === pages} aria-label="Next page">Next <ArrowRight size={15} /></button></div></nav>
+}
+
+export function SegmentedControl<T extends string>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (value: T) => void; label: string }) {
+  return <div className="segmented-tabs" role="tablist" aria-label={label}>{options.map(option => <button key={option.value} role="tab" aria-selected={value === option.value} className={value === option.value ? 'active' : ''} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>
+}
