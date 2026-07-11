@@ -28,13 +28,13 @@ export function OverviewPage() {
     <>
       <section className="relative overflow-hidden bg-[#09272d] text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(80,204,163,0.16),transparent_32%),linear-gradient(120deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:auto,42px_42px]" />
-        <div className="relative mx-auto grid min-h-[520px] max-w-[1200px] items-center gap-12 px-6 py-20 lg:grid-cols-[1.35fr_.65fr]">
+        <div className="relative mx-auto grid min-h-[550px] max-w-[1200px] items-center gap-10 px-6 py-7 lg:grid-cols-[1.35fr_.65fr]">
           <div>
             <span className="mb-5 inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe3c5]">
               <Sparkles size={14} />
-              Executive landscape intelligence
+              Myeloma landscape intelligence
             </span>
-            <h1 className="max-w-3xl [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-7xl">
+            <h1 className="max-w-3xl [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-6xl">
               Know where myeloma is moving—and{" "}
               <em className="text-[#8fe3c5]">why it matters.</em>
             </h1>
@@ -74,7 +74,7 @@ export function OverviewPage() {
               EMA
             </div>
           </div>
-          <aside className="rounded-xl border border-white/10 bg-white/[0.06] p-6 shadow-2xl backdrop-blur">
+          <aside className="rounded-xl border border-white/10 bg-white/[0.06] p-5 shadow-2xl backdrop-blur">
             <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8fe3c5]">
               Current decision brief
             </span>
@@ -159,8 +159,8 @@ export function OverviewPage() {
       <section className="mx-auto max-w-[1200px] px-6 py-14">
         <SectionHeading
           eyebrow="Competitive footprint"
-          title="Who is executing the active development agenda?"
-          copy="Industry sponsors and research institutions are shown separately because they represent different competitive and ecosystem roles."
+          title="Who is executing the active development?"
+          copy="Industry sponsors and research institutions driving current active development"
         />
         <div className="grid gap-4 lg:grid-cols-2">
           <SponsorLeaderboard
