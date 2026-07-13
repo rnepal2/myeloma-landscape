@@ -56,15 +56,31 @@ npm run typecheck
 npm run build
 ```
 
-## Cloudflare deployment
+## Free deployment and automated refresh
 
-The project deploys as static assets on a Cloudflare Worker. After creating a Cloudflare API token and account, run:
+The production setup uses two free services with a clean separation of responsibilities:
+
+1. GitHub Actions runs the source-data pipeline every day at 07:17 UTC, validates the complete snapshot, and commits accepted files under `public/data/` to `main`.
+2. Cloudflare Workers Builds watches `main`. Every application or data commit is built and deployed as a new static-asset Worker version.
+
+Connect the `rnepal2/myeloma-landscape` repository in Cloudflare Workers & Pages and use these build settings:
+
+```text
+Project name: myeloma-landscape
+Production branch: main
+Build command: npm run build
+Deploy command: npx wrangler deploy
+```
+
+The Worker configuration serves `dist/` and falls back to `index.html` for client-side routes. No runtime database, paid scheduler, Cloudflare API token, or GitHub deployment secret is required with the native Git integration.
+
+To deploy manually from an authenticated local Wrangler session, run:
 
 ```bash
 npm run deploy
 ```
 
-For GitHub deployment, configure repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The deployment workflow runs on pushes to `main`; the refresh workflow runs Monday, Wednesday and Friday at 07:17 UTC.
+The refresh workflow can also be started from GitHub's **Actions → Refresh landscape data → Run workflow** screen. A failed upstream request or failed data-quality check stops the refresh before anything is committed, so the last accepted production snapshot remains available.
 
 ## Data method
 

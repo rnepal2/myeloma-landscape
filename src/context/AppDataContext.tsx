@@ -47,7 +47,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     Promise.all(
       dataFiles.map((name) =>
-        fetch(`/data/${name}.json`).then((response) => {
+        fetch(`/data/${name}.json`, { cache: "no-cache" }).then((response) => {
           if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
           return response.json();
         }),
