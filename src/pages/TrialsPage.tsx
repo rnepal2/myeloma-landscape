@@ -53,8 +53,8 @@ export function TrialsPage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Trial intelligence"
-        title="Interrogate the registered development landscape"
+        eyebrow="Registered trials"
+        title="Explore the ClinicalTrials.gov study set"
         copy="Search and filter structured ClinicalTrials.gov records, then trace each field back to the source study."
       />
       <div className="grid gap-2.5 md:grid-cols-[1fr_190px_170px]">

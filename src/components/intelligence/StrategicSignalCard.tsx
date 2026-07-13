@@ -18,7 +18,7 @@ const dots: Record<string, string> = {
 export function StrategicSignalCard({
   signal,
 }: {
-  signal: StrategicIntelligence["executiveSignals"][number];
+  signal: StrategicIntelligence["landscapeMeasures"][number];
 }) {
   return (
     <article

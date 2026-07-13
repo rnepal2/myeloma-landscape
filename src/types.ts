@@ -112,6 +112,7 @@ export type Evidence = {
   sampleSize: number;
   countsByYear: { name: string; value: number }[];
   targetMomentum: { name: string; value: number }[];
+  targetCountWindow: string;
   topJournals: { name: string; value: number }[];
   publications: Publication[];
   grantCount: number;
@@ -213,7 +214,7 @@ export type StrategicIntelligence = {
     phase: string;
     sponsor: string;
   }[];
-  executiveSignals: {
+  landscapeMeasures: {
     id: string;
     theme: string;
     metric: string;

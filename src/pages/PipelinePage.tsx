@@ -65,7 +65,7 @@ export function PipelinePage() {
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
         eyebrow="Development landscape"
-        title="Pipeline structure and competitive execution"
+        title="Pipeline structure and sponsor activity"
         copy="A therapy-centric view of active interventional studies, target families, modalities, sponsors, and registered geographic activity."
       />
       <div className="grid gap-4 lg:grid-cols-[1.35fr_.8fr]">
@@ -189,9 +189,9 @@ export function PipelinePage() {
       </div>
 
       <SectionHeading
-        eyebrow="Sponsor intelligence"
-        title="Industry leadership and research-system activity"
-        copy="Separating sponsor classes provides a more credible competitive view than ranking companies, government agencies, cooperative groups, and academic institutions together."
+        eyebrow="Sponsor activity"
+        title="Lead sponsors grouped by registry class"
+        copy="ClinicalTrials.gov sponsor classifications are shown separately for industry and non-industry organizations. Counts are active interventional studies attributed to each lead sponsor."
       />
       <div className="mb-16 grid gap-4 lg:grid-cols-2">
         <SponsorLeaderboard

@@ -13,7 +13,7 @@
     "typecheck": "tsc -b --pretty false",
     "format": "prettier --write 'src/**/*.{ts,tsx,css}' vite.config.ts",
     "format:check": "prettier --check 'src/**/*.{ts,tsx,css}' vite.config.ts",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler pages deploy dist --project-name myeloma-landscape"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.2.8",

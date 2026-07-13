@@ -2,8 +2,9 @@ name: Refresh landscape data
 
 on:
   schedule:
-    # GitHub schedules use UTC. This runs every day at 07:17 UTC.
+    # Run every day at 07:17 US Eastern time, including DST transitions.
     - cron: "17 7 * * *"
+      timezone: "America/New_York"
   workflow_dispatch:
 
 permissions:

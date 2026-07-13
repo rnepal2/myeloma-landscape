@@ -51,9 +51,9 @@ export function EvidencePage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Scientific and funding intelligence"
-        title="Track scientific momentum with the evidence attached"
-        copy="Publication and public-funding activity can identify where scientific attention is accumulating. These signals do not measure evidence quality, clinical benefit, or probability of technical success."
+        eyebrow="Publication and funding records"
+        title="PubMed literature and NIH-funded projects"
+        copy="The page combines annual PubMed counts, target-linked query counts, a recent citation sample, and NIH RePORTER projects. These are record counts and award amounts, not measures of evidence quality or clinical benefit."
       />
       <div className="mb-5 grid overflow-hidden rounded-lg border border-[#dbe5e1] shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
@@ -112,10 +112,11 @@ export function EvidencePage() {
         </article>
         <article className="rounded-lg border border-[#dbe5e1] bg-white p-6">
           <h2 className="text-[15px] font-bold text-[#0b292f]">
-            Target mentions in recent titles
+            Target-linked PubMed records
           </h2>
           <p className="mt-1 text-xs text-[#65797b]">
-            Deterministic matching across the latest citation sample.
+            Reviewed target and therapy terms in titles or abstracts,{" "}
+            {evidence.targetCountWindow}.
           </p>
           <div className="mt-5 space-y-3">
             {evidence.targetMomentum.slice(0, 7).map((item, index) => (
@@ -143,9 +144,9 @@ export function EvidencePage() {
       </div>
 
       <SectionHeading
-        eyebrow="Early research signal"
+        eyebrow="NIH RePORTER records"
         title="NIH-funded multiple myeloma projects"
-        copy="Public award activity provides visibility into emerging translational themes, enabling technologies, and investigator networks before they become mature development programs."
+        copy="Projects require multiple myeloma in the project title and cover the current and two prior fiscal years. Amounts are the award values returned for each application record."
       />
       <div className="overflow-hidden rounded-lg border border-[#dbe5e1] bg-white">
         {grantItems.map((grant) => (

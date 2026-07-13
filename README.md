@@ -2,21 +2,21 @@
 
 A source-linked public intelligence application for tracking multiple myeloma trials, assets, sponsors, targets and indication-level regulatory milestones.
 
-The frontend uses React, TypeScript, React Router, Tailwind CSS, and Vite. All production data is precomputed so the deployed application remains a static Cloudflare Worker asset bundle.
+The frontend uses React, TypeScript, React Router, Tailwind CSS, and Vite. All production data is precomputed so the deployed application remains a static Cloudflare Pages site.
 
 ## What is included
 
 - Live ClinicalTrials.gov API v2 ingestion
-- PubMed publication momentum and recent citation explorer
+- PubMed annual counts, target-linked query counts, and recent citation explorer
 - NIH RePORTER funding signals for disease-titled projects
 - Automated FDA oncology approval-notification ingestion
 - DailyMed label-version monitoring, EMA medicine status, and FDA oncology supply watch
 - Version-controlled myeloma asset, target and modality ontology
 - Change events computed between accepted snapshots
-- Executive overview, paginated trial explorer, integrated pipeline/asset map, evidence intelligence and regulatory timeline
-- Deterministic strategic signals for target crowding, research-to-pipeline gaps, sponsor concentration, catalysts, global execution and supply intersections
+- Public overview, paginated trial explorer, integrated pipeline/asset map, publication and funding records, and regulatory timeline
+- Six deterministic landscape measures covering registered target activity, literature, NIH funding, sponsor share, completion dates, and site geography
 - Data-quality gates that fail closed
-- Cloudflare Worker Static Assets configuration
+- Cloudflare Pages static deployment configuration
 - Scheduled GitHub Actions refresh and deployment workflows
 
 This project supports research and landscape exploration. It is not medical advice, clinical decision support, regulatory advice or investment advice.
@@ -60,19 +60,19 @@ npm run build
 
 The production setup uses two free services with a clean separation of responsibilities:
 
-1. GitHub Actions runs the source-data pipeline every day at 07:17 UTC, validates the complete snapshot, and commits accepted files under `public/data/` to `main`.
-2. Cloudflare Workers Builds watches `main`. Every application or data commit is built and deployed as a new static-asset Worker version.
+1. GitHub Actions runs the source-data pipeline every day at 07:17 US Eastern time, validates the complete snapshot, and commits accepted files under `public/data/` to `main`.
+2. Cloudflare Pages watches `main`. Every application or data commit is built and deployed as a new static site version.
 
-Connect the `rnepal2/myeloma-landscape` repository in Cloudflare Workers & Pages and use these build settings:
+Connect the `rnepal2/myeloma-landscape` repository as a Cloudflare Pages project and use these build settings:
 
 ```text
 Project name: myeloma-landscape
 Production branch: main
 Build command: npm run build
-Deploy command: npx wrangler deploy
+Build output directory: dist
 ```
 
-The Worker configuration serves `dist/` and falls back to `index.html` for client-side routes. No runtime database, paid scheduler, Cloudflare API token, or GitHub deployment secret is required with the native Git integration.
+The `_redirects` file falls back to `index.html` for client-side routes. No runtime database, paid scheduler, Cloudflare API token, or GitHub deployment secret is required with the native Git integration.
 
 To deploy manually from an authenticated local Wrangler session, run:
 
@@ -86,10 +86,10 @@ The refresh workflow can also be started from GitHub's **Actions → Refresh lan
 
 The registry query is `query.cond="Multiple Myeloma"`. Headline “active” counts include interventional studies that are recruiting, active-not-recruiting, not-yet-recruiting or enrolling-by-invitation. Interventions are classified using `config/ontology.json`. Unmatched interventions remain unclassified rather than being inferred without evidence.
 
-The evidence layer uses PubMed E-utilities for citations with multiple myeloma in the title and NIH RePORTER for recent awards with the disease phrase in the project title. These are activity signals—not measures of evidence quality, clinical benefit or commercial attractiveness.
+The evidence layer uses PubMed E-utilities for annual disease-title counts, a 200-record recent citation stream, and target-specific title/abstract counts over the current and two prior calendar years. NIH RePORTER returns recent application records with the disease phrase in the project title. These are source-record counts and award amounts—not measures of evidence quality or clinical benefit.
 
 The regulatory and market-context layer retrieves reviewed therapy labels from DailyMed, centrally managed European medicine records from EMA, and current oncology shortage records from FDA. Supply records remain presentation-specific and are never generalized to an entire molecule.
 
-`public/data/strategic.json` combines comparable fields across sources into transparent executive screening metrics. These outputs are not forecasts, clinical rankings, market-share estimates or investment recommendations.
+`public/data/strategic.json` combines comparable fields across sources into six scoped landscape measures and a target-level comparison table. These outputs are not forecasts, clinical rankings, market-share estimates or investment recommendations.
 
 Current regulatory records are retrieved from FDA oncology approval notifications. `config/regulatory_events.json` provides older or fallback milestones. Events are kept at the indication/regimen level and are deliberately not inferred from the existence of a product record.

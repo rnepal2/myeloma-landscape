@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 import json
+from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "public" / "data"
+ACTIVE = {"RECRUITING", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION"}
+
+def target_family(value):
+    if not value or value == "Unclassified": return None
+    for family in ("BCMA", "GPRC5D", "FcRH5", "CD38", "Cereblon", "Proteasome", "XPO1", "BCL-2", "SLAMF7"):
+        if value.startswith(family): return family
+    return value
 
 def fail(message):
     raise SystemExit(f"DATA VALIDATION FAILED: {message}")
@@ -23,6 +31,9 @@ def main():
     if any(not t.get("sponsorClass") for t in trials): fail("trial sponsor class missing")
     if summary["trialCount"] != len(trials): fail("summary trial count mismatch")
     if summary["assetCount"] != len(assets): fail("summary asset count mismatch")
+    active = [t for t in trials if t["studyType"] == "INTERVENTIONAL" and t["status"] in ACTIVE]
+    if summary["activeTrialCount"] != len(active): fail("summary active trial count mismatch")
+    if summary["recruitingTrialCount"] != sum(t["studyType"] == "INTERVENTIONAL" and t["status"] == "RECRUITING" for t in trials): fail("summary recruiting count mismatch")
     if not summary.get("datasetVersion") or not summary.get("sourceRetrievedAt"): fail("missing provenance")
     id_set = set(ids)
     broken = [a["id"] for a in assets if not set(a["trialIds"]).issubset(id_set)]
@@ -30,15 +41,42 @@ def main():
     if not payload["regulatory"]: fail("regulatory timeline empty")
     evidence = payload["evidence"]
     if evidence.get("sampleSize", 0) < 100 or len(evidence.get("countsByYear", [])) != 6: fail("PubMed evidence snapshot incomplete")
+    if evidence["sampleSize"] != len(evidence["publications"]): fail("PubMed sample size mismatch")
+    pmids = [p.get("pmid") for p in evidence["publications"]]
+    if len(pmids) != len(set(pmids)): fail("PubMed IDs are duplicated")
     if any(not p.get("pmid") or not p.get("sourceUrl") for p in evidence["publications"]): fail("PubMed evidence provenance incomplete")
+    target_counts = evidence.get("targetMomentum", [])
+    if len(target_counts) < 10 or not evidence.get("targetCountWindow"): fail("target-level PubMed counts incomplete")
+    if len({x.get("name") for x in target_counts}) != len(target_counts): fail("target-level PubMed counts duplicated")
+    if any(not isinstance(x.get("value"), int) or x["value"] < 0 for x in target_counts): fail("target-level PubMed count invalid")
     if evidence.get("grantCount", 0) < 25 or not evidence.get("grants"): fail("NIH RePORTER snapshot incomplete")
+    grant_ids = [g.get("id") for g in evidence["grants"]]
+    if len(grant_ids) != len(set(grant_ids)): fail("NIH application IDs are duplicated")
+    if evidence["grantCount"] < len(evidence["grants"]): fail("NIH result total is smaller than retrieved records")
     if any(not g.get("id") or not g.get("sourceUrl") for g in evidence["grants"]): fail("NIH grant provenance incomplete")
     market = payload["market-context"]
     if len(market.get("dailyMedLabels", [])) < 10: fail("DailyMed label snapshot incomplete")
+    label_ids = [x.get("setId") for x in market["dailyMedLabels"]]
+    if len(label_ids) != len(set(label_ids)): fail("DailyMed set IDs are duplicated")
     if len(market.get("emaMedicines", [])) < 20: fail("EMA medicine snapshot incomplete")
     if not market.get("shortageSourceUpdatedAt"): fail("FDA shortage provenance incomplete")
+    if any(not x.get("sourceUrl") for x in market.get("shortages", [])): fail("FDA shortage source URL missing")
     strategic = payload["strategic"]
-    if len(strategic.get("targetLandscape", [])) < 5 or len(strategic.get("executiveSignals", [])) < 5: fail("strategic intelligence incomplete")
+    if len(strategic.get("targetLandscape", [])) < 5 or len(strategic.get("landscapeMeasures", [])) != 6: fail("strategic landscape measures incomplete")
+    strategic_targets = strategic["targetLandscape"]
+    if len({x.get("target") for x in strategic_targets}) != len(strategic_targets): fail("strategic target rows duplicated")
+    if any(x.get("activeTrials", 0) < x.get("recruitingTrials", 0) for x in strategic_targets): fail("recruiting target count exceeds active count")
+    if any(not 0 <= x.get("crowdingScore", -1) <= 100 for x in strategic_targets): fail("target activity index outside 0-100")
+    expected_target_trials = defaultdict(set)
+    for trial in active:
+        families = {target_family(item.get("target")) for item in trial["interventions"]}
+        for family in families - {None}:
+            expected_target_trials[family].add(trial["nctId"])
+    for row in strategic_targets:
+        if row["activeTrials"] != len(expected_target_trials[row["target"]]): fail(f"target active-trial mismatch for {row['target']}")
+    sponsor_counts = Counter(t["sponsor"] for t in active)
+    expected_top5_share = round(100 * sum(v for _, v in sponsor_counts.most_common(5)) / len(active), 1)
+    if strategic["top5SponsorShare"] != expected_top5_share: fail("top-five sponsor share mismatch")
     if not strategic.get("geographicFootprint") or not strategic.get("topSponsors") or not strategic.get("industrySponsors") or not strategic.get("institutionSponsors"): fail("strategic landscape cuts incomplete")
     if any(x.get("sponsorClass") != "INDUSTRY" for x in strategic["industrySponsors"]): fail("industry sponsor classification invalid")
     if any(x.get("sponsorClass") == "INDUSTRY" for x in strategic["institutionSponsors"]): fail("institution sponsor classification invalid")

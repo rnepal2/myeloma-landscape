@@ -14,8 +14,8 @@ export function TargetMatrix({
           <span>Trials</span>
           <span>Phase 3</span>
           <span>Sponsors</span>
-          <span>Recent evidence</span>
-          <span>Crowding</span>
+          <span>Research records</span>
+          <span>Activity index</span>
         </div>
         {rows.map((row) => (
           <div
@@ -28,7 +28,8 @@ export function TargetMatrix({
             <span>{row.phase3Trials}</span>
             <span>{row.sponsors}</span>
             <span>
-              {row.recentPublications} papers · {row.recentGrants} grants
+              {row.recentPublications.toLocaleString()} PubMed ·{" "}
+              {row.recentGrants} NIH
             </span>
             <span className="grid grid-cols-[1fr_22px] items-center gap-2">
               <i className="h-1.5 overflow-hidden rounded-full bg-[#e6ece9]">

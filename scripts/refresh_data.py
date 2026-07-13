@@ -30,6 +30,19 @@ DAILYMED_SPLS = "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json"
 EMA_MEDICINES = "https://www.ema.europa.eu/en/documents/report/medicines-output-medicines_json-report_en.json"
 FDA_SHORTAGES = "https://api.fda.gov/drug/shortages.json"
 LABEL_DRUGS = ["daratumumab", "isatuximab", "teclistamab", "belantamab mafodotin", "ciltacabtagene autoleucel", "idecabtagene vicleucel", "elranatamab", "talquetamab", "bortezomib", "carfilzomib", "lenalidomide", "pomalidomide", "selinexor", "ixazomib", "elotuzumab", "melphalan"]
+PUBMED_TARGET_TERMS = {
+    "BCMA": ["BCMA", '"B-cell maturation antigen"', "TNFRSF17", "teclistamab", "elranatamab", "belantamab", "idecabtagene", "ciltacabtagene"],
+    "CD38": ["CD38", "daratumumab", "isatuximab"],
+    "Cereblon": ["cereblon", "CRBN", "lenalidomide", "pomalidomide", "thalidomide", "mezigdomide", "iberdomide"],
+    "Proteasome": ["proteasome", "bortezomib", "carfilzomib", "ixazomib"],
+    "Glucocorticoid receptor": ['"glucocorticoid receptor"', "NR3C1", "dexamethasone"],
+    "DNA alkylation": ["alkylating", "melphalan", "cyclophosphamide"],
+    "GPRC5D": ["GPRC5D", "talquetamab"],
+    "SLAMF7": ["SLAMF7", "elotuzumab"],
+    "BCL-2": ['"BCL-2"', "BCL2", "venetoclax"],
+    "XPO1": ["XPO1", '"exportin 1"', "selinexor"],
+    "FcRH5": ["FcRH5", "FCRL5", "cevostamab"],
+}
 QUERY = '"Multiple Myeloma"'
 FIELDS = "|".join([
     "NCTId", "BriefTitle", "BriefSummary", "OverallStatus", "Phase", "StudyType",
@@ -178,8 +191,17 @@ def fetch_pubmed_evidence() -> dict:
         year_query = f'{query} AND {year}[PDAT]'
         count_payload = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode({'db':'pubmed','term':year_query,'retmode':'json','retmax':'0'})}")
         counts_by_year.append({"name": str(year), "value": int(count_payload.get("esearchresult", {}).get("count", 0))})
-    target_counter = Counter(target for pub in publications for target in pub["linkedTargets"])
     journal_counter = Counter(pub["journal"] for pub in publications)
+    window_start = current_year - 2
+    disease_scope = '("multiple myeloma"[Title/Abstract] OR "plasma cell myeloma"[Title/Abstract])'
+    target_counts = []
+    for target, terms in PUBMED_TARGET_TERMS.items():
+        target_scope = " OR ".join(f"{term}[Title/Abstract]" for term in terms)
+        target_query = f"{disease_scope} AND ({target_scope}) AND {window_start}:{current_year}[PDAT]"
+        time.sleep(0.34)
+        target_payload = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode({'db':'pubmed','term':target_query,'retmode':'json','retmax':'0'})}")
+        target_counts.append({"name": target, "value": int(target_payload.get("esearchresult", {}).get("count", 0))})
+    target_counts.sort(key=lambda item: (-item["value"], item["name"]))
     grant_payload = {
         "criteria": {"advanced_text_search": {"operator": "and", "search_field": "projecttitle", "search_text": '"multiple myeloma"'}, "fiscal_years": [current_year - 2, current_year - 1, current_year]},
         "include_fields": ["ApplId", "ProjectTitle", "Organization", "ProjectNum", "FiscalYear", "AwardAmount", "AwardNoticeDate", "ProjectStartDate", "ProjectEndDate", "PrincipalInvestigators", "ProjectDetailUrl"],
@@ -203,12 +225,12 @@ def fetch_pubmed_evidence() -> dict:
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "query": query, "totalCount": int(search_result.get("count", 0)), "sampleSize": len(publications),
-        "countsByYear": counts_by_year, "targetMomentum": [{"name": k, "value": v} for k, v in target_counter.most_common(10)],
+        "countsByYear": counts_by_year, "targetMomentum": target_counts, "targetCountWindow": f"{window_start}–{current_year}",
         "topJournals": [{"name": k, "value": v} for k, v in journal_counter.most_common(8)],
         "publications": publications,
         "grantCount": int(grant_response.get("meta", {}).get("total", len(grants))), "grants": grants,
         "grantAwardsByYear": [{"name": str(y), "value": grant_years[str(y)]} for y in range(current_year - 2, current_year + 1)],
-        "methodology": "Most recent PubMed records matching multiple myeloma in the citation title; target and asset links use deterministic title matching and do not imply evidence quality, clinical relevance or positive outcomes. NIH funding records require the disease phrase in the project title."
+        "methodology": f"The literature explorer contains the 200 most recent PubMed records with multiple myeloma or plasma cell myeloma in the citation title. Target-level counts use separate PubMed queries across titles and abstracts for reviewed target and therapy terms during {window_start}–{current_year}; target counts can overlap and are not measures of evidence quality or clinical benefit. NIH RePORTER records require multiple myeloma in the project title and cover the current and two prior fiscal years."
     }
 
 
@@ -291,7 +313,7 @@ def target_family(value: str | None) -> str | None:
     return value
 
 
-def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary: dict, evidence: dict, market: dict, regulatory: list[dict], now: str) -> dict:
+def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary: dict, evidence: dict, now: str) -> dict:
     active = [t for t in trials if t["studyType"] == "INTERVENTIONAL" and t["status"] in ACTIVE]
     target_trials, target_recruiting, target_phase3 = defaultdict(set), defaultdict(set), defaultdict(set)
     target_sponsors, country_trials = defaultdict(set), defaultdict(set)
@@ -318,7 +340,7 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
         if family: target_assets[family].add(asset["id"])
         modality = asset.get("modality")
         if modality and modality not in {"Drug", "Biological", "Unclassified"}: modality_assets[modality].add(asset["id"])
-    evidence_targets = Counter(target_family(t) for pub in evidence["publications"] for t in set(pub["linkedTargets"]))
+    evidence_targets = Counter({target_family(item["name"]): item["value"] for item in evidence["targetMomentum"]})
     evidence_targets.pop(None, None)
     grant_targets = Counter()
     for grant in evidence["grants"]:
@@ -353,20 +375,21 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
     cutoff = today.replace(year=today.year + 1) if not (today.month == 2 and today.day == 29) else today.replace(year=today.year + 1, day=28)
     cutoff = cutoff.replace(month=min(12, cutoff.month + 6)) if cutoff.month <= 6 else cutoff.replace(year=cutoff.year + 1, month=cutoff.month - 6)
     late_stage = [x for x in summary["upcomingMilestones"] if x["phase"] == "PHASE3" and x["date"] <= cutoff.isoformat()]
-    opportunity_candidates = [x for x in target_rows if x["recentPublications"] + x["recentGrants"] >= 2]
-    opportunity_candidates.sort(key=lambda x: -((x["recentPublications"] + 2*x["recentGrants"]) / (x["activeTrials"] + 1)))
-    opportunity = opportunity_candidates[0] if opportunity_candidates else target_rows[-1]
     crowded = target_rows[0]
-    unavailable = sum("unavailable" in x["availability"].lower() for x in market["shortages"])
+    literature = max(target_rows, key=lambda x: (x["recentPublications"], x["target"]))
+    current_fy = datetime.now(timezone.utc).year
+    current_grants = [grant for grant in evidence["grants"] if grant["fiscalYear"] == current_fy]
+    current_funding = sum(grant["awardAmount"] for grant in current_grants)
+    funding_metric = f"${current_funding / 1_000_000:.1f}M" if current_funding >= 1_000_000 else f"${current_funding / 1_000:.0f}K"
     signals = [
-        {"id":"target-crowding","theme":"Competitive intensity","metric":f"{crowded['activeTrials']} active trials","title":f"{crowded['target']} is the most crowded target family","detail":f"{crowded['activeAssets']} active assets across {crowded['sponsors']} registry sponsors create the highest composite crowding score ({crowded['crowdingScore']}/100).","tone":"amber"},
-        {"id":"translation-gap","theme":"White-space watch","metric":f"{opportunity['recentPublications']} papers · {opportunity['recentGrants']} grants","title":f"{opportunity['target']} shows research activity relative to clinical crowding","detail":f"The recent evidence/funding sample compares with {opportunity['activeTrials']} active trials. This is a screening signal, not an attractiveness recommendation.","tone":"teal"},
-        {"id":"sponsor-concentration","theme":"Sponsor structure","metric":f"{top5_share}% of active trials","title":"Lead-sponsor activity is distributed beyond the largest organizations" if top5_share < 35 else "Lead-sponsor activity is concentrated among the largest organizations","detail":f"The five most active lead sponsors account for {top5_share}% of active interventional studies across {len(sponsor_counts)} registered sponsors. Sponsor class should be considered when interpreting competitive position.","tone":"blue"},
-        {"id":"catalyst-window","theme":"Catalyst horizon","metric":f"{len(late_stage)} Phase 3 milestones","title":"Late-stage primary completions cluster inside the next 18 months","detail":"Registry dates are sponsor estimates; the catalyst list should be monitored for timing and status changes.","tone":"purple"},
-        {"id":"global-footprint","theme":"Trial execution","metric":f"{len(country_rows)} countries","title":"Active development has a broad global footprint","detail":f"The United States leads with {country_rows[0]['activeTrials'] if country_rows else 0} active studies with at least one registered site; geography reflects registry location completeness.","tone":"blue"},
-        {"id":"supply-watch","theme":"Operational watch","metric":f"{unavailable} unavailable presentations","title":"Current FDA oncology shortage records intersect the myeloma regimen map","detail":"Availability is presentation- and manufacturer-specific and should not be generalized to an entire active ingredient.","tone":"red"}
+        {"id":"target-activity","theme":"Registered target activity","metric":f"{crowded['activeTrials']} active trials","title":f"{crowded['target']} has the largest target-linked active-trial set","detail":f"The set contains {crowded['activeAssets']} classified active assets and {crowded['sponsors']} distinct lead sponsors in ClinicalTrials.gov.","tone":"amber"},
+        {"id":"publication-activity","theme":"Scientific literature","metric":f"{literature['recentPublications']:,} PubMed records","title":f"{literature['target']} has the highest target-linked literature count","detail":f"Count from reviewed title/abstract terms within the {evidence['targetCountWindow']} PubMed window; target query results can overlap.","tone":"teal"},
+        {"id":"nih-funding","theme":"Public funding","metric":f"{funding_metric} in FY{current_fy}","title":f"NIH RePORTER returned {len(current_grants)} current-fiscal-year records","detail":"Award amounts are summed from disease-title project records and may change as NIH updates the current fiscal year.","tone":"purple"},
+        {"id":"sponsor-concentration","theme":"Sponsor distribution","metric":f"{top5_share}% top-five share","title":"Share of active trials attributed to the five largest lead sponsors","detail":f"The denominator is {len(active)} active interventional studies across {len(sponsor_counts)} distinct registered lead sponsors.","tone":"blue"},
+        {"id":"catalyst-window","theme":"Completion dates","metric":f"{len(late_stage)} Phase 3 dates","title":"Registered primary-completion dates within the next 18 months","detail":"Dates are sponsor-submitted estimates from ClinicalTrials.gov and can be revised.","tone":"purple"},
+        {"id":"global-footprint","theme":"Geographic coverage","metric":f"{len(country_rows)} countries","title":"Countries with a registered site in at least one active study","detail":f"The United States appears on {country_rows[0]['activeTrials'] if country_rows else 0} active studies; counts depend on registry location completeness.","tone":"blue"}
     ]
-    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"industrySponsors":industry_sponsors,"institutionSponsors":institution_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"executiveSignals":signals,"methodology":"Cross-source signals are deterministic screening metrics derived from active ClinicalTrials.gov records, recent PubMed citations, NIH awards, FDA events/shortages, DailyMed labels and EMA medicine records. They are not forecasts, rankings of clinical value or commercial recommendations."}
+    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"industrySponsors":industry_sponsors,"institutionSponsors":institution_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"landscapeMeasures":signals,"methodology":"Target rows combine distinct active ClinicalTrials.gov studies, classified active assets, distinct lead sponsors, target-linked PubMed query counts, and title-matched NIH project records. The activity index weights normalized active trials (50%), active assets (30%), and sponsors (20%). Source counts describe retrieved records; they are not forecasts or rankings of clinical or commercial value."}
 
 
 def compact_date(module: dict, key: str) -> str | None:
@@ -559,7 +582,7 @@ def main() -> None:
         print(f"Market-context refresh warning; retaining accepted snapshot: {exc}", file=sys.stderr)
     evidence = json.loads((OUT / "evidence.json").read_text())
     market_context = json.loads((OUT / "market-context.json").read_text())
-    strategic = build_strategic_intelligence(trials, assets, summary, evidence, market_context, regulatory, now)
+    strategic = build_strategic_intelligence(trials, assets, summary, evidence, now)
     write_json(OUT / "strategic.json", strategic)
     print(f"Built {len(trials):,} trials, {len(assets):,} assets, version {version}")
 

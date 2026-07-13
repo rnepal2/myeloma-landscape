@@ -35,9 +35,9 @@ export function RegulatoryPage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Regulatory and operational context"
+        eyebrow="Regulatory and supply records"
         title="Follow approvals, labels, European status, and supply"
-        copy="Each view addresses a distinct regulatory or operational question using an automatically refreshed primary-source layer."
+        copy="Separate source views cover FDA oncology actions, DailyMed label versions, EMA medicine status, and current FDA shortage records."
       />
       <div className="mb-6 grid overflow-hidden rounded-lg border border-[#dbe5e1] bg-white sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -71,7 +71,7 @@ export function RegulatoryPage() {
       <SegmentedControl
         value={tab}
         onChange={setTab}
-        label="Regulatory intelligence views"
+        label="Regulatory source views"
         options={[
           { value: "fda", label: "FDA actions" },
           { value: "labels", label: "US label pulse" },
