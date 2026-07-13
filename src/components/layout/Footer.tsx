@@ -37,9 +37,8 @@ export function Footer() {
             Methodology
           </h3>
           <p className="text-[13px] leading-6">
-            Source records are normalized with a reviewed asset and target
-            ontology. Derived counts retain links to the underlying public
-            systems and document their scope and limitations.
+            Definitions, source scope, refresh rules, and limitations for every
+            dataset on the site.
           </p>
           <Link
             className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#8fe3c5] no-underline hover:text-white"
@@ -67,14 +66,6 @@ export function Footer() {
               </a>
             ))}
           </div>
-        </div>
-      </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-2 px-6 py-5 text-[10px] leading-5 text-[#789294] sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Public-data landscape reference · Not medical or regulatory advice
-          </span>
-          <span>Source records may be revised by their publishers</span>
         </div>
       </div>
     </footer>

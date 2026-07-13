@@ -104,7 +104,7 @@ export function PipelinePage() {
         </article>
         <article className="rounded-lg border border-[#dbe5e1] bg-white p-6">
           <h2 className="text-[15px] font-bold text-[#0b292f]">
-            Target-family concentration
+            Target-family distribution
           </h2>
           <p className="mt-1 text-xs text-[#65797b]">
             Unique active trials consolidated across target-specific modalities.
@@ -165,7 +165,7 @@ export function PipelinePage() {
         </article>
         <article className="border-b border-white/10 p-5 md:border-b-0 md:border-r">
           <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#8fe3c5]">
-            Most active lead sponsor
+            Highest active-study lead-sponsor count
           </span>
           <strong className="mt-2 block [font-family:Newsreader] text-xl font-medium">
             {strategic.topSponsors[0]?.name}
@@ -176,7 +176,7 @@ export function PipelinePage() {
         </article>
         <article className="p-5">
           <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#8fe3c5]">
-            Largest registered footprint
+            Highest registered site count
           </span>
           <strong className="mt-2 block [font-family:Newsreader] text-xl font-medium">
             {strategic.geographicFootprint[0]?.country}
@@ -197,13 +197,13 @@ export function PipelinePage() {
         <SponsorLeaderboard
           kind="industry"
           title="Industry-sponsored development"
-          subtitle="Leading industry-classified sponsors by active interventional study count"
+          subtitle="Industry-classified sponsors by active interventional study count"
           sponsors={strategic.industrySponsors.slice(0, 8)}
         />
         <SponsorLeaderboard
           kind="institution"
           title="Institutional research activity"
-          subtitle="Leading non-industry sponsors, including government, academic, and network organizations"
+          subtitle="Non-industry sponsors, including government, academic, and network organizations"
           sponsors={strategic.institutionSponsors.slice(0, 8)}
         />
       </div>

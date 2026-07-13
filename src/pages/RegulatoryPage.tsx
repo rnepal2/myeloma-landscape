@@ -74,9 +74,9 @@ export function RegulatoryPage() {
         label="Regulatory source views"
         options={[
           { value: "fda", label: "FDA actions" },
-          { value: "labels", label: "US label pulse" },
+          { value: "labels", label: "US label records" },
           { value: "europe", label: "European status" },
-          { value: "supply", label: "Supply watch" },
+          { value: "supply", label: "FDA shortage records" },
         ]}
       />
 
@@ -255,20 +255,20 @@ export function RegulatoryPage() {
 function ContextHeader({ tab }: { tab: Exclude<Tab, "fda"> }) {
   const content = {
     labels: [
-      "US label pulse",
-      "Which reviewed therapy labels changed most recently?",
-      "Structured Product Label versions provide a reproducible monitoring surface; the current label remains authoritative.",
+      "DailyMed label records",
+      "Recent Structured Product Label versions for reviewed therapies",
+      "Records are ordered by published update date; the current linked label remains authoritative.",
       "DailyMed",
     ],
     europe: [
-      "European regulatory position",
-      "Centralised medicine status and recent record updates",
-      "EMA adds an international view across authorised, withdrawn, lapsed, and expired records.",
+      "EMA medicine records",
+      "Centralised medicine status and record updates",
+      "Records include authorised, withdrawn, lapsed, and expired EMA medicine entries within the documented scope.",
       "EMA",
     ],
     supply: [
-      "Operational supply watch",
-      "Current shortages intersecting the regimen map",
+      "FDA shortage records",
+      "Current shortage records matched to reviewed therapies",
       "Availability is presentation- and manufacturer-specific and must not be generalized to an entire active ingredient.",
       "FDA daily",
     ],

@@ -31,7 +31,7 @@ export function OverviewPage() {
           <div>
             <span className="mb-5 inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe3c5]">
               <Sparkles size={14} />
-              Source-linked myeloma landscape
+              Myeloma Landscape
             </span>
             <h1 className="max-w-3xl [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-6xl">
               Public records, organized across the{" "}

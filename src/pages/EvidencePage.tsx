@@ -195,7 +195,7 @@ export function EvidencePage() {
 
       <SectionHeading
         eyebrow="Recent literature"
-        title="Explore the PubMed evidence stream"
+        title="Browse recent PubMed records"
         copy="Search citation titles, journals, authors, reviewed therapy names, and deterministically matched targets."
       />
       <div className="mb-3 max-w-2xl">
