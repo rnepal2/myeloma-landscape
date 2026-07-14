@@ -46,7 +46,7 @@ export function TrialDrawer({
         <div className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#158c77]">
           {trial.nctId}
         </div>
-        <h2 className="mr-10 mt-3 [font-family:Newsreader] text-[34px] font-medium leading-[1.14] tracking-[-0.02em] text-[#0b292f]">
+        <h2 className="mr-10 mt-3 text-pretty [font-family:Newsreader] text-[34px] font-medium leading-[1.14] tracking-[-0.02em] text-[#0b292f]">
           {trial.title}
         </h2>
         <div className="mt-4 flex flex-wrap gap-1.5">

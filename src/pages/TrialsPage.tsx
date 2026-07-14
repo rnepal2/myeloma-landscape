@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { TrialDrawer } from "../components/trials/TrialDrawer";
 import { Badge } from "../components/ui/Badge";
 import { PageIntro } from "../components/ui/PageIntro";
@@ -10,7 +11,8 @@ import type { Trial } from "../types";
 
 export function TrialsPage() {
   const { trials } = useAppData();
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("query") ?? "");
   const [status, setStatus] = useState("ACTIVE");
   const [phase, setPhase] = useState("ALL");
   const [selected, setSelected] = useState<Trial | null>(null);
@@ -54,7 +56,7 @@ export function TrialsPage() {
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
         eyebrow="Registered trials"
-        title="Explore the ClinicalTrials.gov study set"
+        title="Explore ClinicalTrials.gov studies"
         copy="Search and filter structured ClinicalTrials.gov records, then trace each field back to the source study."
       />
       <div className="grid gap-2.5 md:grid-cols-[1fr_190px_170px]">

@@ -33,7 +33,7 @@ export function OverviewPage() {
               <Sparkles size={14} />
               Myeloma Landscape
             </span>
-            <h1 className="max-w-3xl [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-6xl">
+            <h1 className="max-w-3xl text-balance [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-6xl">
               Public records, organized across the{" "}
               <em className="text-[#8fe3c5]">myeloma landscape.</em>
             </h1>
@@ -160,7 +160,7 @@ export function OverviewPage() {
           <SectionHeading
             eyebrow="Change monitor"
             title="Recent registry changes"
-            copy="The feed lists newly observed trials and selected status or record updates. It does not interpret study outcomes."
+            copy="Up to four recent status changes or record updates are shown from the accepted refresh history. The feed does not interpret study outcomes."
           />
           {changes.slice(0, 4).map((change) => (
             <article
@@ -181,13 +181,17 @@ export function OverviewPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <Badge tone={change.severity === "high" ? "amber" : "blue"}>
-                    {change.severity} change
+                    {change.type === "STATUS_CHANGE"
+                      ? "Status change"
+                      : change.type === "NEW_STUDY"
+                        ? "New study"
+                        : "Record update"}
                   </Badge>
                   <span className="text-[10px] text-[#7b8d8f]">
                     {shortDate(change.date)}
                   </span>
                 </div>
-                <h3 className="mt-2 text-[15px] font-bold leading-5 text-[#0b292f]">
+                <h3 className="mt-2 text-pretty text-[15px] font-bold leading-5 text-[#0b292f]">
                   {change.title}
                 </h3>
                 <p className="mt-1.5 text-xs leading-5 text-[#65797b]">

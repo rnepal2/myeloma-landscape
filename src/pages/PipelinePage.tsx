@@ -1,5 +1,6 @@
-import { Building2, Target } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, Building2, ExternalLink, Target } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -20,7 +21,8 @@ import { SearchBox } from "../components/ui/SearchBox";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { SourceNote } from "../components/ui/SourceNote";
 import { useAppData } from "../context/AppDataContext";
-import { prettyEnum } from "../lib/format";
+import { activeStatuses, prettyEnum } from "../lib/format";
+import type { Asset, Trial } from "../types";
 
 const chartColors = [
   "#178c77",
@@ -32,7 +34,7 @@ const chartColors = [
 ];
 
 export function PipelinePage() {
-  const { summary, assets, strategic } = useAppData();
+  const { summary, trials, assets, strategic } = useAppData();
   const [query, setQuery] = useState("");
   const [target, setTarget] = useState("ALL");
   const [page, setPage] = useState(1);
@@ -59,6 +61,10 @@ export function PipelinePage() {
         .includes(query.toLowerCase()),
   );
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const trialById = useMemo(
+    () => new Map(trials.map((trial) => [trial.nctId, trial])),
+    [trials],
+  );
   useEffect(() => setPage(1), [query, target]);
 
   return (
@@ -211,7 +217,7 @@ export function PipelinePage() {
       <SectionHeading
         eyebrow="Program explorer"
         title="Search active therapy and regimen entities"
-        copy="Programs are normalized where reviewed aliases exist. Unresolved development codes remain separate to avoid false entity merges."
+        copy="Programs are normalized where reviewed aliases exist. Each card links to its matching study set and a recently updated source record; unresolved development codes remain separate to avoid false entity merges."
       />
       <div className="grid gap-2.5 sm:grid-cols-[1fr_240px]">
         <SearchBox
@@ -240,50 +246,76 @@ export function PipelinePage() {
         active program entities
       </p>
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {pageItems.map((asset) => (
-          <article
-            className="rounded-lg border border-[#dbe5e1] bg-white p-5"
-            key={asset.id}
-          >
-            <div className="flex items-start justify-between">
-              <span className="grid size-9 place-items-center rounded-full bg-[#e4f3ed] text-[#158c77]">
-                <Target size={16} />
-              </span>
-              <Badge tone="blue">{prettyEnum(asset.highestPhase)}</Badge>
-            </div>
-            <h3 className="mt-4 text-[15px] font-bold text-[#0b292f]">
-              {asset.name}
-            </h3>
-            <p className="mt-1 text-[11px] text-[#65797b]">
-              {asset.modality} · {asset.target}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {asset.sponsors.slice(0, 2).map((sponsor) => (
-                <span
-                  className="inline-flex items-center gap-1 rounded bg-[#f0f4f1] px-2 py-1 text-[9px] text-[#5f7476]"
-                  key={sponsor}
-                >
-                  <Building2 size={11} />
-                  {sponsor}
+        {pageItems.map((asset) => {
+          const sourceTrial = latestSourceTrial(asset, trialById);
+          return (
+            <article
+              className="flex h-full flex-col rounded-lg border border-[#dbe5e1] bg-white p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#b9d4cb] hover:shadow-[0_12px_28px_rgba(19,70,59,.08)] motion-reduce:transform-none"
+              key={asset.id}
+            >
+              <div className="flex items-start justify-between">
+                <span className="grid size-9 place-items-center rounded-full bg-[#e4f3ed] text-[#158c77]">
+                  <Target size={16} />
                 </span>
-              ))}
-            </div>
-            <div className="mt-5 flex gap-5 text-[10px] text-[#718587]">
-              <span>
-                <strong className="mr-1 text-sm text-[#0b292f]">
-                  {asset.activeTrialCount}
-                </strong>
-                active
-              </span>
-              <span>
-                <strong className="mr-1 text-sm text-[#0b292f]">
-                  {asset.recruitingTrialCount}
-                </strong>
-                recruiting
-              </span>
-            </div>
-          </article>
-        ))}
+                <Badge tone="blue">{prettyEnum(asset.highestPhase)}</Badge>
+              </div>
+              <h3 className="mt-4 line-clamp-2 min-h-10 text-pretty text-[15px] font-bold leading-5 text-[#0b292f]">
+                {asset.name}
+              </h3>
+              <p className="mt-1 text-[11px] text-[#65797b]">
+                {asset.modality} · {asset.target}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {asset.sponsors.slice(0, 2).map((sponsor) => (
+                  <span
+                    className="inline-flex items-center gap-1 rounded bg-[#f0f4f1] px-2 py-1 text-[9px] text-[#5f7476]"
+                    key={sponsor}
+                  >
+                    <Building2 size={11} />
+                    {sponsor}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-auto flex gap-5 pt-5 text-[10px] text-[#718587]">
+                <span>
+                  <strong className="mr-1 text-sm text-[#0b292f]">
+                    {asset.activeTrialCount}
+                  </strong>
+                  active studies
+                </span>
+                <span>
+                  <strong className="mr-1 text-sm text-[#0b292f]">
+                    {asset.recruitingTrialCount}
+                  </strong>
+                  recruiting
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e3eae6] pt-3">
+                <Link
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#158c77] no-underline hover:text-[#0b292f]"
+                  to={`/trials?query=${encodeURIComponent(asset.name)}`}
+                >
+                  View {asset.trialCount.toLocaleString()} linked{" "}
+                  {asset.trialCount === 1 ? "study" : "studies"}
+                  <ArrowRight size={12} />
+                </Link>
+                {sourceTrial && (
+                  <a
+                    aria-label={`Open the most recently updated linked ClinicalTrials.gov record for ${asset.name}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#718587] no-underline hover:text-[#158c77]"
+                    href={sourceTrial.sourceUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                    title={`Open ${sourceTrial.nctId} in ClinicalTrials.gov`}
+                  >
+                    Latest source
+                    <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
       <Pagination
         page={page}
@@ -299,4 +331,28 @@ export function PipelinePage() {
       </SourceNote>
     </section>
   );
+}
+
+function latestSourceTrial(asset: Asset, trialById: Map<string, Trial>) {
+  let latestActive: Trial | undefined;
+  let latestAny: Trial | undefined;
+  for (const id of asset.trialIds) {
+    const trial = trialById.get(id);
+    if (!trial) continue;
+    if (
+      !latestAny ||
+      (trial.lastUpdated ?? "") > (latestAny.lastUpdated ?? "")
+    ) {
+      latestAny = trial;
+    }
+    if (
+      trial.studyType === "INTERVENTIONAL" &&
+      activeStatuses.has(trial.status) &&
+      (!latestActive ||
+        (trial.lastUpdated ?? "") > (latestActive.lastUpdated ?? ""))
+    ) {
+      latestActive = trial;
+    }
+  }
+  return latestActive ?? latestAny;
 }

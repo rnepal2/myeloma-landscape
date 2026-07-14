@@ -28,6 +28,7 @@ def main():
     if len(trials) < 1000: fail(f"unexpected trial count {len(trials)}")
     ids = [t.get("nctId") for t in trials]
     if len(ids) != len(set(ids)) or None in ids: fail("NCT IDs are missing or duplicated")
+    if any(t.get("sourceUrl") != f"https://clinicaltrials.gov/study/{t.get('nctId')}" for t in trials): fail("ClinicalTrials.gov source URL missing or invalid")
     if any(not t.get("sponsorClass") for t in trials): fail("trial sponsor class missing")
     if summary["trialCount"] != len(trials): fail("summary trial count mismatch")
     if summary["assetCount"] != len(assets): fail("summary asset count mismatch")
@@ -38,6 +39,22 @@ def main():
     id_set = set(ids)
     broken = [a["id"] for a in assets if not set(a["trialIds"]).issubset(id_set)]
     if broken: fail(f"broken asset references: {broken[:3]}")
+    if any(not a.get("trialIds") for a in assets): fail("asset without a linked ClinicalTrials.gov study")
+    changes = payload["changes"]
+    if not 1 <= len(changes) <= 50: fail(f"unexpected registry change count {len(changes)}")
+    change_ids = [event.get("id") for event in changes]
+    if len(change_ids) != len(set(change_ids)) or None in change_ids: fail("registry change IDs are missing or duplicated")
+    change_records = [(event.get("nctId"), event.get("date")) for event in changes]
+    if len(change_records) != len(set(change_records)): fail("registry changes repeat a study and date")
+    if any(event.get("type") not in {"RECENT_UPDATE", "NEW_STUDY", "STATUS_CHANGE"} for event in changes): fail("registry change type invalid")
+    if any(event.get("severity") not in {"high", "medium", "low"} for event in changes): fail("registry change severity invalid")
+    if any(not event.get("sourceUrl") or not event.get("observedAt") or not event.get("date") for event in changes): fail("registry change provenance incomplete")
+    severity_order = {"high": 0, "medium": 1, "low": 2}
+    type_priority = {"RECENT_UPDATE": 0, "NEW_STUDY": 1, "STATUS_CHANGE": 2}
+    expected_change_order = sorted(changes, key=lambda event: severity_order[event["severity"]])
+    expected_change_order.sort(key=lambda event: type_priority[event["type"]], reverse=True)
+    expected_change_order.sort(key=lambda event: event["date"], reverse=True)
+    if changes != expected_change_order: fail("registry changes are not ordered by date, event type, and severity")
     if not payload["regulatory"]: fail("regulatory timeline empty")
     evidence = payload["evidence"]
     if evidence.get("sampleSize", 0) < 100 or len(evidence.get("countsByYear", [])) != 6: fail("PubMed evidence snapshot incomplete")
@@ -80,6 +97,6 @@ def main():
     if not strategic.get("geographicFootprint") or not strategic.get("topSponsors") or not strategic.get("industrySponsors") or not strategic.get("institutionSponsors"): fail("strategic landscape cuts incomplete")
     if any(x.get("sponsorClass") != "INDUSTRY" for x in strategic["industrySponsors"]): fail("industry sponsor classification invalid")
     if any(x.get("sponsorClass") == "INDUSTRY" for x in strategic["institutionSponsors"]): fail("institution sponsor classification invalid")
-    print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(payload['changes'])} signals, {evidence['sampleSize']} publications, {evidence['grantCount']} grants, {len(market['dailyMedLabels'])} labels, {len(market['emaMedicines'])} EMA records, {len(strategic['targetLandscape'])} target families")
+    print(f"Data valid: {len(trials):,} trials, {len(assets):,} assets, {len(changes)} registry changes, {evidence['sampleSize']} publications, {evidence['grantCount']} grants, {len(market['dailyMedLabels'])} labels, {len(market['emaMedicines'])} EMA records, {len(strategic['targetLandscape'])} target families")
 
 if __name__ == "__main__": main()

@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "public" / "data"
 PREVIOUS = OUT / "trials.json"
+PREVIOUS_CHANGES = OUT / "changes.json"
 ONTOLOGY = json.loads((ROOT / "config" / "ontology.json").read_text())
 REGULATORY = json.loads((ROOT / "config" / "regulatory_events.json").read_text())
 API = "https://clinicaltrials.gov/api/v2/studies"
@@ -495,7 +496,12 @@ def make_assets(trials: list[dict]) -> list[dict]:
     return sorted(result, key=lambda x: (-x["activeTrialCount"], -x["trialCount"], x["name"].lower()))
 
 
-def snapshot_changes(trials: list[dict], previous: list[dict] | None, now: str) -> list[dict]:
+def snapshot_changes(
+    trials: list[dict],
+    previous: list[dict] | None,
+    now: str,
+    previous_events: list[dict] | None = None,
+) -> list[dict]:
     events = []
     current_map = {t["nctId"]: t for t in trials}
     previous_map = {t["nctId"]: t for t in previous or []}
@@ -516,9 +522,22 @@ def snapshot_changes(trials: list[dict], previous: list[dict] | None, now: str) 
         event["id"] = slug(f"{event['type']}-{event.get('nctId')}-{event['date']}")
         event["sourceUrl"] = f"https://clinicaltrials.gov/study/{event.get('nctId')}"
         event["observedAt"] = now
+
+    # Retain accepted events so a quiet refresh does not erase the recent-change
+    # history. Prefer explicit status/new-study events over generic record
+    # updates for the same study and date.
+    type_priority = {"RECENT_UPDATE": 0, "NEW_STUDY": 1, "STATUS_CHANGE": 2}
+    merged = {}
+    for event in [*(previous_events or []), *events]:
+        identity = (event.get("nctId") or event["id"], event["date"])
+        accepted = merged.get(identity)
+        if not accepted or type_priority.get(event["type"], 0) >= type_priority.get(accepted["type"], 0):
+            merged[identity] = event
+    events = list(merged.values())
     severity_order = {"high": 0, "medium": 1, "low": 2}
-    events.sort(key=lambda e: e["date"], reverse=True)
     events.sort(key=lambda e: severity_order[e["severity"]])
+    events.sort(key=lambda e: type_priority.get(e["type"], 0), reverse=True)
+    events.sort(key=lambda e: e["date"], reverse=True)
     return events[:50]
 
 
@@ -547,6 +566,7 @@ def write_json(path: Path, value) -> None:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     previous = json.loads(PREVIOUS.read_text()) if PREVIOUS.exists() else None
+    previous_events = json.loads(PREVIOUS_CHANGES.read_text()) if PREVIOUS_CHANGES.exists() else None
     raw = fetch_studies()
     trials = sorted((normalize(x) for x in raw), key=lambda x: (x.get("lastUpdated") or "", x["nctId"]), reverse=True)
     if len(trials) < 1000 or any(not t.get("nctId") for t in trials):
@@ -554,7 +574,7 @@ def main() -> None:
     version = hashlib.sha256(json.dumps(trials, sort_keys=True).encode()).hexdigest()[:12]
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     assets = make_assets(trials)
-    changes = snapshot_changes(trials, previous, now)
+    changes = snapshot_changes(trials, previous, now, previous_events)
     summary = build_summary(trials, assets, now, version)
     write_json(OUT / "trials.json", trials); write_json(OUT / "assets.json", assets)
     write_json(OUT / "changes.json", changes); write_json(OUT / "summary.json", summary)

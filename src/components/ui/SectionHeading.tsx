@@ -19,7 +19,7 @@ export function SectionHeading({
             {eyebrow}
           </span>
         )}
-        <h2 className="m-0 [font-family:Newsreader] text-[34px] font-medium leading-tight tracking-[-0.02em] text-[#0b292f]">
+        <h2 className="m-0 text-balance [font-family:Newsreader] text-[34px] font-medium leading-tight tracking-[-0.02em] text-[#0b292f]">
           {title}
         </h2>
         {copy && (

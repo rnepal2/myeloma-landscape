@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "data:refresh": "python3 scripts/refresh_data.py",
     "data:check": "python3 scripts/validate_data.py",
-    "test": "vitest run",
+    "test": "vitest run && python3 -m unittest scripts.test_refresh_data",
     "typecheck": "tsc -b --pretty false",
     "format": "prettier --write 'src/**/*.{ts,tsx,css}' vite.config.ts",
     "format:check": "prettier --check 'src/**/*.{ts,tsx,css}' vite.config.ts",
