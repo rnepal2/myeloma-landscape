@@ -82,7 +82,6 @@ export function MethodologyPage() {
   return (
     <section className="mx-auto max-w-[1040px] px-6 py-16">
       <PageIntro
-        eyebrow="Methodology and limitations"
         title="How records are retrieved, classified, and summarized"
         copy="The site separates source records, reviewed classifications, and deterministic derived measures so that each displayed number has a defined scope."
       />
@@ -101,10 +100,7 @@ export function MethodologyPage() {
       </div>
 
       <section className="mt-14">
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#158c77]">
-          Source register
-        </span>
-        <h2 className="mt-2 [font-family:Newsreader] text-[32px] font-medium text-[#0b292f]">
+        <h2 className="m-0 [font-family:Newsreader] text-[32px] font-medium text-[#0b292f]">
           Public systems and retrieval scope
         </h2>
         <div className="mt-5 overflow-hidden rounded-lg border border-[#dbe5e1] bg-white">

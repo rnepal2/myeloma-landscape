@@ -55,7 +55,6 @@ export function TrialsPage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Registered trials"
         title="Explore ClinicalTrials.gov studies"
         copy="Search and filter structured ClinicalTrials.gov records, then trace each field back to the source study."
       />

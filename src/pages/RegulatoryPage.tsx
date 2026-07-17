@@ -35,7 +35,6 @@ export function RegulatoryPage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Regulatory and supply records"
         title="Follow approvals, labels, European status, and supply"
         copy="Separate source views cover FDA oncology actions, DailyMed label versions, EMA medicine status, and current FDA shortage records."
       />
@@ -255,19 +254,16 @@ export function RegulatoryPage() {
 function ContextHeader({ tab }: { tab: Exclude<Tab, "fda"> }) {
   const content = {
     labels: [
-      "DailyMed label records",
       "Recent Structured Product Label versions for reviewed therapies",
       "Records are ordered by published update date; the current linked label remains authoritative.",
       "DailyMed",
     ],
     europe: [
-      "EMA medicine records",
       "Centralised medicine status and record updates",
       "Records include authorised, withdrawn, lapsed, and expired EMA medicine entries within the documented scope.",
       "EMA",
     ],
     supply: [
-      "FDA shortage records",
       "Current shortage records matched to reviewed therapies",
       "Availability is presentation- and manufacturer-specific and must not be generalized to an entire active ingredient.",
       "FDA daily",
@@ -276,18 +272,15 @@ function ContextHeader({ tab }: { tab: Exclude<Tab, "fda"> }) {
   return (
     <div className="flex flex-col justify-between gap-4 rounded-t-lg bg-[#102e33] p-6 text-white sm:flex-row">
       <div>
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8fe3c5]">
+        <h2 className="m-0 [font-family:Newsreader] text-[26px] font-medium">
           {content[0]}
-        </span>
-        <h2 className="mt-2 [font-family:Newsreader] text-[26px] font-medium">
-          {content[1]}
         </h2>
         <p className="mt-1 max-w-3xl text-xs leading-5 text-[#afc2c2]">
-          {content[2]}
+          {content[1]}
         </p>
       </div>
       <span className="self-start rounded-full border border-[#8fe3c5]/30 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8fe3c5]">
-        {content[3]}
+        {content[2]}
       </span>
     </div>
   );

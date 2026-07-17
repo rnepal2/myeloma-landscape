@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
 
 export function SectionHeading({
-  eyebrow,
   title,
   copy,
   action,
 }: {
-  eyebrow?: string;
   title: string;
   copy?: string;
   action?: ReactNode;
@@ -14,11 +12,6 @@ export function SectionHeading({
   return (
     <div className="mb-7 flex items-end justify-between gap-6">
       <div>
-        {eyebrow && (
-          <span className="mb-3 block text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#158c77]">
-            {eyebrow}
-          </span>
-        )}
         <h2 className="m-0 text-balance [font-family:Newsreader] text-[34px] font-medium leading-tight tracking-[-0.02em] text-[#0b292f]">
           {title}
         </h2>

@@ -70,7 +70,6 @@ export function PipelinePage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Development landscape"
         title="Pipeline structure and sponsor activity"
         copy="A therapy-centric view of active interventional studies, target families, modalities, sponsors, and registered geographic activity."
       />
@@ -195,7 +194,6 @@ export function PipelinePage() {
       </div>
 
       <SectionHeading
-        eyebrow="Sponsor activity"
         title="Lead sponsors grouped by registry class"
         copy="ClinicalTrials.gov sponsor classifications are shown separately for industry and non-industry organizations. Counts are active interventional studies attributed to each lead sponsor."
       />
@@ -215,7 +213,6 @@ export function PipelinePage() {
       </div>
 
       <SectionHeading
-        eyebrow="Program explorer"
         title="Search active therapy and regimen entities"
         copy="Programs are normalized where reviewed aliases exist. Each card links to its matching study set and a recently updated source record; unresolved development codes remain separate to avoid false entity merges."
       />

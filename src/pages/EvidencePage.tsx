@@ -51,7 +51,6 @@ export function EvidencePage() {
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
       <PageIntro
-        eyebrow="Publication and funding records"
         title="PubMed literature and NIH-funded projects"
         copy="The page combines annual PubMed counts, target-linked query counts, a recent citation sample, and NIH RePORTER projects. These are record counts and award amounts, not measures of evidence quality or clinical benefit."
       />
@@ -144,7 +143,6 @@ export function EvidencePage() {
       </div>
 
       <SectionHeading
-        eyebrow="NIH RePORTER records"
         title="NIH-funded multiple myeloma projects"
         copy="Projects require multiple myeloma in the project title and cover the current and two prior fiscal years. Amounts are the award values returned for each application record."
       />
@@ -194,7 +192,6 @@ export function EvidencePage() {
       />
 
       <SectionHeading
-        eyebrow="Recent literature"
         title="Browse recent PubMed records"
         copy="Search citation titles, journals, authors, reviewed therapy names, and deterministically matched targets."
       />

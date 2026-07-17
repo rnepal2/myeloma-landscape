@@ -5,7 +5,6 @@ import {
   FlaskConical,
   GitCompareArrows,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StrategicSignalCard } from "../components/intelligence/StrategicSignalCard";
@@ -29,10 +28,6 @@ export function OverviewPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(80,204,163,0.16),transparent_32%),linear-gradient(120deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:auto,42px_42px]" />
         <div className="relative mx-auto grid min-h-[550px] max-w-[1200px] items-center gap-10 px-6 py-7 lg:grid-cols-[1.35fr_.65fr]">
           <div>
-            <span className="mb-5 inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe3c5]">
-              <Sparkles size={14} />
-              Myeloma Landscape
-            </span>
             <h1 className="max-w-3xl text-balance [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-6xl">
               Public records, organized across the{" "}
               <em className="text-[#8fe3c5]">myeloma landscape.</em>
@@ -125,7 +120,6 @@ export function OverviewPage() {
 
       <section className="mx-auto max-w-[1200px] px-6 pb-8 pt-24">
         <SectionHeading
-          eyebrow="Landscape measures"
           title="Six current measures from the refreshed dataset"
           copy="Each card reports a defined count, share, amount, or date window from the public-source records described in the methodology."
         />
@@ -138,7 +132,6 @@ export function OverviewPage() {
 
       <section className="mx-auto max-w-[1200px] px-6 py-14">
         <SectionHeading
-          eyebrow="Target-level source comparison"
           title="Registered activity and source-linked research counts"
           copy="Rows align active trial, classified asset, lead-sponsor, PubMed, and NIH project counts by reviewed target family. Counts describe different source records and are not additive."
           action={
@@ -158,7 +151,6 @@ export function OverviewPage() {
       <section className="mx-auto grid max-w-[1200px] gap-12 px-6 py-16 lg:grid-cols-[1.55fr_.8fr]">
         <div>
           <SectionHeading
-            eyebrow="Change monitor"
             title="Recent registry changes"
             copy="Up to four recent status changes or record updates are shown from the accepted refresh history. The feed does not interpret study outcomes."
           />
@@ -212,10 +204,7 @@ export function OverviewPage() {
         </div>
         <aside className="space-y-4">
           <div className="rounded-lg bg-[#102e33] p-6 text-white">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8fe3c5]">
-              Registry date horizon
-            </span>
-            <h2 className="mt-2 [font-family:Newsreader] text-2xl font-medium">
+            <h2 className="m-0 [font-family:Newsreader] text-2xl font-medium">
               Upcoming primary-completion dates
             </h2>
             <div className="mt-5">
@@ -253,10 +242,7 @@ export function OverviewPage() {
           </div>
           <div className="rounded-lg border border-[#dbe5e1] bg-white p-6">
             <ShieldCheck className="float-right text-[#158c77]" size={24} />
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#158c77]">
-              Latest FDA action
-            </span>
-            <h2 className="mt-3 [font-family:Newsreader] text-[22px] font-medium leading-7 text-[#0b292f]">
+            <h2 className="m-0 pr-10 [font-family:Newsreader] text-[22px] font-medium leading-7 text-[#0b292f]">
               {regulatory[0]?.title}
             </h2>
             <p className="mt-2 text-xs leading-5 text-[#65797b]">
