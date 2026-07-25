@@ -26,11 +26,11 @@ import type { Asset, Trial } from "../types";
 
 const chartColors = [
   "#788aff",
-  "#9bd67d",
-  "#d6ad62",
-  "#dc7772",
-  "#7180d5",
-  "#a48bd1",
+  "#b8c1ff",
+  "#5264cf",
+  "#d6dbff",
+  "#6879e6",
+  "#929fff",
 ];
 
 export function PipelinePage() {

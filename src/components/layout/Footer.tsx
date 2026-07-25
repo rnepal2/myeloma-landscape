@@ -16,10 +16,10 @@ const sources = [
 
 export function Footer() {
   return (
-    <footer className="bg-[#08262c] text-[#9bb0b1]">
+    <footer className="border-t border-white/10 bg-[#0d1015] text-[#9bb0b1]">
       <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-12 md:grid-cols-[1.15fr_.85fr_1.2fr]">
         <div className="flex items-start gap-3.5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#8fe3c5]/25 bg-[#8fe3c5]/10 text-[#8fe3c5] shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#788aff]/30 bg-[linear-gradient(145deg,rgba(120,138,255,.16),rgba(255,255,255,.025))] text-[#91a0ff] shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
             <LandscapeMark className="size-7" />
           </span>
           <div>
@@ -41,7 +41,7 @@ export function Footer() {
             dataset on the site.
           </p>
           <Link
-            className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#8fe3c5] no-underline hover:text-white"
+            className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#91a0ff] no-underline hover:text-white"
             to="/methodology"
           >
             <ShieldCheck size={15} />
@@ -55,7 +55,7 @@ export function Footer() {
           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
             {sources.map(([label, href]) => (
               <a
-                className="inline-flex items-center gap-1.5 text-[12px] text-[#b4c7c7] no-underline transition hover:text-[#8fe3c5]"
+                className="inline-flex items-center gap-1.5 text-[12px] text-[#b4c7c7] no-underline transition hover:text-[#91a0ff]"
                 href={href}
                 key={label}
                 rel="noreferrer"

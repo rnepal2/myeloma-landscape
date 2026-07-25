@@ -34,7 +34,7 @@ export function TargetMatrix({
             <span className="grid grid-cols-[1fr_22px] items-center gap-2">
               <i className="h-1.5 overflow-hidden rounded-full bg-[#e6ece9]">
                 <b
-                  className="block h-full rounded-full bg-gradient-to-r from-[#158c77] to-[#dda03b]"
+                  className="block h-full rounded-full bg-gradient-to-r from-[#667aff] to-[#aab5ff]"
                   style={{ width: `${row.crowdingScore}%` }}
                 />
               </i>

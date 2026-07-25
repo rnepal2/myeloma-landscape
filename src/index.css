@@ -84,7 +84,7 @@ textarea {
 .theme-obsidian [class~="bg-[#e4f3ed]"],
 .theme-obsidian [class~="bg-[#dcf3ea]"],
 .theme-obsidian [class~="bg-[#e2f5ed]"] {
-  background-color: #171e1a;
+  background-color: #151729;
 }
 
 .theme-obsidian [class~="bg-[#e2f6ee]"] {
@@ -126,9 +126,12 @@ textarea {
   background-color: rgb(120 138 255 / 9%);
 }
 
-.theme-obsidian [class~="bg-[#6de0b8]"],
-.theme-obsidian [class~="bg-[#209d83]"] {
+.theme-obsidian [class~="bg-[#6de0b8]"] {
   background-color: var(--ml-status);
+}
+
+.theme-obsidian [class~="bg-[#209d83]"] {
+  background-color: var(--ml-primary);
 }
 
 .theme-obsidian [class~="bg-[#dda03b]"] {
@@ -200,7 +203,7 @@ textarea {
 
 .theme-obsidian [class~="text-[#8fe3c5]"],
 .theme-obsidian [class~="text-[#9cf0d1]"] {
-  color: var(--ml-status);
+  color: var(--ml-primary-bright);
 }
 
 .theme-obsidian [class~="text-[#d2e1df]"],
@@ -238,7 +241,7 @@ textarea {
 }
 
 .theme-obsidian [class~="border-l-[#209d83]"] {
-  border-left-color: var(--ml-status);
+  border-left-color: var(--ml-primary);
 }
 
 .theme-obsidian [class~="border-l-[#dda03b]"] {
