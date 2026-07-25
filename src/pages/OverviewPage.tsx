@@ -25,12 +25,12 @@ export function OverviewPage() {
   return (
     <>
       <section className="relative overflow-hidden bg-[#09272d] text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(80,204,163,0.16),transparent_32%),linear-gradient(120deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:auto,42px_42px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(120,138,255,0.13),transparent_32%),linear-gradient(120deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:auto,42px_42px]" />
         <div className="relative mx-auto grid min-h-[550px] max-w-[1200px] items-center gap-10 px-6 py-7 lg:grid-cols-[1.35fr_.65fr]">
           <div>
             <h1 className="max-w-3xl text-balance [font-family:Newsreader] text-5xl font-medium leading-[.98] tracking-[-0.04em] sm:text-6xl">
               Public records, organized across the{" "}
-              <em className="text-[#8fe3c5]">myeloma landscape.</em>
+              <em className="text-[#91a0ff]">myeloma landscape.</em>
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-[#b8cece]">
               A structured view of registered trials, classified therapies,
@@ -39,7 +39,7 @@ export function OverviewPage() {
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
-                className="inline-flex items-center gap-2 rounded-md bg-[#b8f0db] px-4 py-3 text-xs font-extrabold text-[#09272d] no-underline hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md bg-[#b8f0db] px-4 py-3 text-xs font-extrabold text-[#090b0e] no-underline hover:bg-white"
                 to="/pipeline"
               >
                 Explore pipeline data

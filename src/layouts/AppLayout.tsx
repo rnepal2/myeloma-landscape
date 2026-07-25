@@ -9,7 +9,7 @@ export function AppLayout() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [location.pathname]);
   return (
-    <div className="min-h-screen bg-[#f4f7f4] text-[#153237]">
+    <div className="theme-obsidian min-h-screen bg-[#090b0e] text-[#f0f1ee]">
       <Header />
       <main>
         <Outlet />

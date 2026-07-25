@@ -1,1 +1,312 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  font-family:
+    "Manrope Variable", Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --ml-canvas: #090b0e;
+  --ml-surface: #111418;
+  --ml-surface-raised: #15191e;
+  --ml-surface-muted: #191e23;
+  --ml-border: #2a3036;
+  --ml-border-strong: #39414a;
+  --ml-text: #f0f1ee;
+  --ml-text-muted: #9ba3aa;
+  --ml-text-faint: #737d86;
+  --ml-primary: #788aff;
+  --ml-primary-bright: #91a0ff;
+  --ml-status: #9bd67d;
+  --ml-warning: #d6ad62;
+  --ml-danger: #dc7772;
+}
+
+html {
+  background: var(--ml-canvas);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--ml-canvas);
+  color: var(--ml-text);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgb(120 138 255 / 32%);
+  color: #fff;
+}
+
+.theme-obsidian {
+  background: var(--ml-canvas);
+  color: var(--ml-text);
+}
+
+.theme-obsidian :focus-visible {
+  outline-color: var(--ml-primary);
+  outline-offset: 3px;
+}
+
+/* Existing light-theme utilities are remapped here so every page shares one
+   palette while component structure and behavior stay unchanged. */
+.theme-obsidian [class~="bg-white"] {
+  background-color: var(--ml-surface);
+}
+
+.theme-obsidian [class~="bg-[#f4f7f4]"] {
+  background-color: var(--ml-canvas);
+}
+
+.theme-obsidian [class~="bg-[#f6f9f7]"],
+.theme-obsidian [class~="bg-[#f1f7f3]"],
+.theme-obsidian [class~="bg-[#edf7f2]"],
+.theme-obsidian [class~="bg-[#f1f5f3]"],
+.theme-obsidian [class~="bg-[#f0f4f1]"],
+.theme-obsidian [class~="bg-[#f2f6f3]"],
+.theme-obsidian [class~="bg-[#eef3f0]"],
+.theme-obsidian [class~="bg-[#edf1ef]"],
+.theme-obsidian [class~="bg-[#e7eeea]"],
+.theme-obsidian [class~="bg-[#e8eeeb]"],
+.theme-obsidian [class~="bg-[#e6ece9]"],
+.theme-obsidian [class~="bg-[#e4eef1]"] {
+  background-color: var(--ml-surface-muted);
+}
+
+.theme-obsidian [class~="bg-[#e4f3ed]"],
+.theme-obsidian [class~="bg-[#dcf3ea]"],
+.theme-obsidian [class~="bg-[#e2f5ed]"] {
+  background-color: #171e1a;
+}
+
+.theme-obsidian [class~="bg-[#e2f6ee]"] {
+  background-color: #151729;
+}
+
+.theme-obsidian [class~="bg-[#fff0d6]"] {
+  background-color: #251f15;
+}
+
+.theme-obsidian [class~="bg-[#f8e4e2]"] {
+  background-color: #29191a;
+}
+
+.theme-obsidian [class~="bg-[#e5eef2]"] {
+  background-color: #171b27;
+}
+
+.theme-obsidian [class~="bg-[#09272d]"],
+.theme-obsidian [class~="bg-[#102e33]"],
+.theme-obsidian [class~="bg-[#08262c]"],
+.theme-obsidian [class~="bg-[#0b2c32]/98"] {
+  background-color: #0b0e12;
+}
+
+.theme-obsidian [class~="bg-[#b8f0db]"],
+.theme-obsidian [class~="bg-[#0b292f]"],
+.theme-obsidian [class~="bg-[#158c77]"],
+.theme-obsidian [class~="bg-[#178c77]"],
+.theme-obsidian [class~="bg-[#1b9c82]"] {
+  background-color: var(--ml-primary);
+}
+
+.theme-obsidian [class~="bg-[#09272d]/45"] {
+  background-color: rgb(0 0 0 / 72%);
+}
+
+.theme-obsidian [class~="bg-[#8fe3c5]/10"] {
+  background-color: rgb(120 138 255 / 9%);
+}
+
+.theme-obsidian [class~="bg-[#6de0b8]"],
+.theme-obsidian [class~="bg-[#209d83]"] {
+  background-color: var(--ml-status);
+}
+
+.theme-obsidian [class~="bg-[#dda03b]"] {
+  background-color: var(--ml-warning);
+}
+
+.theme-obsidian [class~="bg-[#4b7b86]"],
+.theme-obsidian [class~="bg-[#517d87]"] {
+  background-color: #6f80dd;
+}
+
+.theme-obsidian [class~="bg-[#756a9b]"] {
+  background-color: #9987c9;
+}
+
+.theme-obsidian [class~="bg-[#b85c55]"] {
+  background-color: var(--ml-danger);
+}
+
+.theme-obsidian [class~="text-[#0b292f]"],
+.theme-obsidian [class~="text-[#153237]"] {
+  color: var(--ml-text);
+}
+
+.theme-obsidian [class~="text-[#65797b]"],
+.theme-obsidian [class~="text-[#718587]"],
+.theme-obsidian [class~="text-[#63787a]"],
+.theme-obsidian [class~="text-[#637b78]"],
+.theme-obsidian [class~="text-[#5e7274]"],
+.theme-obsidian [class~="text-[#5e7376]"],
+.theme-obsidian [class~="text-[#5f7476]"],
+.theme-obsidian [class~="text-[#6b7d7f]"],
+.theme-obsidian [class~="text-[#748789]"],
+.theme-obsidian [class~="text-[#7b8d8f]"],
+.theme-obsidian [class~="text-[#7c8d8f]"],
+.theme-obsidian [class~="text-[#7e8f91]"],
+.theme-obsidian [class~="text-[#798b8d]"],
+.theme-obsidian [class~="text-[#809b9f]"],
+.theme-obsidian [class~="text-[#819c9d]"],
+.theme-obsidian [class~="text-[#829193]"],
+.theme-obsidian [class~="text-[#839294]"],
+.theme-obsidian [class~="text-[#879697]"],
+.theme-obsidian [class~="text-[#879799]"],
+.theme-obsidian [class~="text-[#8a999a]"],
+.theme-obsidian [class~="text-[#8b999a]"],
+.theme-obsidian [class~="text-[#8ca5a7]"],
+.theme-obsidian [class~="text-[#8fa9aa]"],
+.theme-obsidian [class~="text-[#91aaab]"],
+.theme-obsidian [class~="text-[#93a9aa]"],
+.theme-obsidian [class~="text-[#9bb0b1]"],
+.theme-obsidian [class~="text-[#a8bdbd]"],
+.theme-obsidian [class~="text-[#adc1c1]"],
+.theme-obsidian [class~="text-[#adc2c2]"],
+.theme-obsidian [class~="text-[#afc2c2]"],
+.theme-obsidian [class~="text-[#b4c7c7]"],
+.theme-obsidian [class~="text-[#b8cece]"] {
+  color: var(--ml-text-muted);
+}
+
+.theme-obsidian [class~="text-[#158c77]"],
+.theme-obsidian [class~="text-[#178c77]"],
+.theme-obsidian [class~="text-[#176f5d]"],
+.theme-obsidian [class~="text-[#3f6871]"],
+.theme-obsidian [class~="text-[#456e78]"],
+.theme-obsidian [class~="text-[#456f79]"],
+.theme-obsidian [class~="text-[#517d87]"] {
+  color: var(--ml-primary-bright);
+}
+
+.theme-obsidian [class~="text-[#8fe3c5]"],
+.theme-obsidian [class~="text-[#9cf0d1]"] {
+  color: var(--ml-status);
+}
+
+.theme-obsidian [class~="text-[#d2e1df]"],
+.theme-obsidian [class~="text-[#d8e7e5]"],
+.theme-obsidian [class~="text-[#d9e8e5]"],
+.theme-obsidian [class~="text-[#e3efed]"] {
+  color: #e6e8e6;
+}
+
+.theme-obsidian [class~="text-[#8c5a0f]"],
+.theme-obsidian [class~="text-[#8d590c]"] {
+  color: var(--ml-warning);
+}
+
+.theme-obsidian [class~="text-[#944c46]"] {
+  color: var(--ml-danger);
+}
+
+.theme-obsidian [class~="border-[#dbe5e1]"],
+.theme-obsidian [class~="border-[#dfe6e4]"],
+.theme-obsidian [class~="border-[#e3eae6]"],
+.theme-obsidian [class~="border-[#e5ebe8]"] {
+  border-color: var(--ml-border);
+}
+
+.theme-obsidian [class~="border-[#b9d4cb]"],
+.theme-obsidian [class~="border-[#bed6ce]"],
+.theme-obsidian [class~="border-[#bfe5d7]"],
+.theme-obsidian [class~="border-[#d9f1e8]"] {
+  border-color: var(--ml-border-strong);
+}
+
+.theme-obsidian [class~="border-[#8fe3c5]/25"] {
+  border-color: rgb(120 138 255 / 30%);
+}
+
+.theme-obsidian [class~="border-l-[#209d83]"] {
+  border-left-color: var(--ml-status);
+}
+
+.theme-obsidian [class~="border-l-[#dda03b]"] {
+  border-left-color: var(--ml-warning);
+}
+
+.theme-obsidian [class~="border-l-[#4b7b86]"] {
+  border-left-color: #6f80dd;
+}
+
+.theme-obsidian [class~="border-l-[#756a9b]"] {
+  border-left-color: #9987c9;
+}
+
+.theme-obsidian [class~="border-l-[#b85c55]"] {
+  border-left-color: var(--ml-danger);
+}
+
+.theme-obsidian [class~="hover:border-[#b9d4cb]"]:hover,
+.theme-obsidian [class~="focus-within:border-[#158c77]"]:focus-within {
+  border-color: var(--ml-primary);
+}
+
+.theme-obsidian [class~="hover:bg-[#f1f7f3]"]:hover,
+.theme-obsidian [class~="focus:bg-[#edf7f2]"]:focus {
+  background-color: #171b20;
+}
+
+.theme-obsidian [class~="hover:bg-[#158c77]"]:hover {
+  background-color: var(--ml-primary-bright);
+}
+
+.theme-obsidian [class~="hover:text-[#0b292f]"]:hover,
+.theme-obsidian [class~="hover:text-[#158c77]"]:hover {
+  color: var(--ml-primary-bright);
+}
+
+.theme-obsidian [class~="focus:outline-[#158c77]"]:focus {
+  outline-color: var(--ml-primary);
+}
+
+.theme-obsidian [class~="focus-within:ring-[#158c77]/10"]:focus-within {
+  --tw-ring-color: rgb(120 138 255 / 18%);
+}
+
+.theme-obsidian select {
+  color-scheme: dark;
+}
+
+.theme-obsidian option {
+  background: var(--ml-surface-raised);
+  color: var(--ml-text);
+}
+
+.theme-obsidian .recharts-cartesian-axis-tick-value,
+.theme-obsidian .recharts-legend-item-text {
+  fill: var(--ml-text-muted);
+  color: var(--ml-text-muted);
+}
+
+.theme-obsidian .recharts-default-tooltip {
+  border: 1px solid var(--ml-border) !important;
+  border-radius: 6px !important;
+  background: #12161a !important;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 35%);
+}
+
+.theme-obsidian .recharts-tooltip-label,
+.theme-obsidian .recharts-tooltip-item {
+  color: var(--ml-text) !important;
+}

@@ -83,23 +83,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   if (error)
     return (
-      <main className="grid min-h-screen place-content-center justify-items-center bg-[#f4f7f4] px-6 text-center text-[#0b292f]">
-        <Database className="text-[#b85c55]" size={34} />
+      <main className="theme-obsidian grid min-h-screen place-content-center justify-items-center bg-[#090b0e] px-6 text-center text-[#f0f1ee]">
+        <Database className="text-[#dc7772]" size={34} />
         <h1 className="mt-5 [font-family:Newsreader] text-4xl">
           Data could not be loaded
         </h1>
-        <p className="mt-2 text-sm text-[#65797b]">{error}</p>
+        <p className="mt-2 text-sm text-[#9ba3aa]">{error}</p>
       </main>
     );
   if (!data)
     return (
-      <main className="grid min-h-screen place-content-center justify-items-center bg-[#f4f7f4] px-6 text-center text-[#0b292f]">
-        <Radar className="animate-spin text-[#158c77]" size={34} />
-        <h1 className="mt-5 [font-family:Newsreader] text-4xl">
-          Calibrating the landscape
-        </h1>
-        <p className="mt-2 text-sm text-[#65797b]">
-          Loading the latest validated public-source snapshot…
+      <main className="theme-obsidian grid min-h-screen place-content-center justify-items-center bg-[#090b0e] px-6 text-center text-[#f0f1ee]">
+        <span className="grid size-16 place-items-center rounded-2xl border border-[#788aff]/25 bg-[#788aff]/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_18px_60px_rgba(0,0,0,.28)]">
+          <Radar
+            className="animate-[spin_2.4s_linear_infinite] text-[#91a0ff]"
+            size={30}
+          />
+        </span>
+        <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-[#9ba3aa]">
+          Loading data
         </p>
       </main>
     );

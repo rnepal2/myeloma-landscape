@@ -88,23 +88,23 @@ export function EvidencePage() {
             <ResponsiveContainer>
               <BarChart data={evidence.countsByYear}>
                 <CartesianGrid
-                  stroke="#dfe6e4"
+                  stroke="#2a3036"
                   strokeDasharray="3 3"
                   vertical={false}
                 />
                 <XAxis
                   axisLine={false}
                   dataKey="name"
-                  tick={{ fill: "#6b7d7f", fontSize: 11 }}
+                  tick={{ fill: "#9ba3aa", fontSize: 11 }}
                   tickLine={false}
                 />
                 <YAxis
                   axisLine={false}
-                  tick={{ fill: "#6b7d7f", fontSize: 11 }}
+                  tick={{ fill: "#9ba3aa", fontSize: 11 }}
                   tickLine={false}
                 />
                 <Tooltip />
-                <Bar dataKey="value" fill="#178c77" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="value" fill="#788aff" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

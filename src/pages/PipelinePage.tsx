@@ -25,12 +25,12 @@ import { activeStatuses, prettyEnum } from "../lib/format";
 import type { Asset, Trial } from "../types";
 
 const chartColors = [
-  "#178c77",
-  "#dca03b",
-  "#4d7781",
-  "#b65d55",
-  "#809b9f",
-  "#786d9a",
+  "#788aff",
+  "#9bd67d",
+  "#d6ad62",
+  "#dc7772",
+  "#7180d5",
+  "#a48bd1",
 ];
 
 export function PipelinePage() {
@@ -86,23 +86,23 @@ export function PipelinePage() {
             <ResponsiveContainer>
               <BarChart data={summary.countsByPhase}>
                 <CartesianGrid
-                  stroke="#dfe6e4"
+                  stroke="#2a3036"
                   strokeDasharray="3 3"
                   vertical={false}
                 />
                 <XAxis
                   axisLine={false}
                   dataKey="name"
-                  tick={{ fill: "#6b7d7f", fontSize: 11 }}
+                  tick={{ fill: "#9ba3aa", fontSize: 11 }}
                   tickLine={false}
                 />
                 <YAxis
                   axisLine={false}
-                  tick={{ fill: "#6b7d7f", fontSize: 11 }}
+                  tick={{ fill: "#9ba3aa", fontSize: 11 }}
                   tickLine={false}
                 />
-                <Tooltip cursor={{ fill: "#f1f5f3" }} />
-                <Bar dataKey="value" fill="#178c77" radius={[5, 5, 0, 0]} />
+                <Tooltip cursor={{ fill: "#191e23" }} />
+                <Bar dataKey="value" fill="#788aff" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
