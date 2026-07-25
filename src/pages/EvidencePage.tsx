@@ -103,7 +103,7 @@ export function EvidencePage() {
                   tick={{ fill: "#9ba3aa", fontSize: 11 }}
                   tickLine={false}
                 />
-                <Tooltip />
+                <Tooltip cursor={{ fill: "#191e23" }} />
                 <Bar dataKey="value" fill="#788aff" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

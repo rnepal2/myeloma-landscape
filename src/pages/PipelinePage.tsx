@@ -25,12 +25,12 @@ import { activeStatuses, prettyEnum } from "../lib/format";
 import type { Asset, Trial } from "../types";
 
 const chartColors = [
-  "#788aff",
-  "#b8c1ff",
-  "#5264cf",
   "#d6dbff",
-  "#6879e6",
-  "#929fff",
+  "#b7c0ff",
+  "#98a5fb",
+  "#7c8deb",
+  "#6174d5",
+  "#485cbc",
 ];
 
 export function PipelinePage() {
@@ -41,7 +41,8 @@ export function PipelinePage() {
   const pageSize = 9;
   const targetChart = strategic.targetLandscape
     .slice(0, 6)
-    .map((item) => ({ name: item.target, value: item.activeTrials }));
+    .map((item) => ({ name: item.target, value: item.activeTrials }))
+    .sort((a, b) => a.value - b.value);
   const targets = [
     ...new Set(
       assets
