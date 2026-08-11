@@ -149,7 +149,7 @@ export function MethodologyPage() {
                   timeZoneName: "short",
                 }),
               ],
-              ["Refresh schedule", "Daily at 07:17 US Eastern time"],
+              ["Refresh schedule", "Weekly on Monday at 07:17 US Eastern time"],
             ].map(([label, value]) => (
               <div
                 className="grid gap-2 border-t border-[#e3eae6] p-4 first:border-t-0 sm:grid-cols-[170px_1fr]"

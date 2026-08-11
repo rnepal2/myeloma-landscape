@@ -98,12 +98,18 @@ export function Header() {
             </NavLink>
           ))}
         </nav>
-        <div className="ml-auto hidden items-center gap-3 rounded-full border border-white/15 bg-white/[0.07] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,.1)] backdrop-blur-xl lg:flex">
+        <div className="ml-auto hidden items-center gap-3 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,.1)] backdrop-blur-xl lg:flex">
           <span className="size-2 rounded-full bg-[#9bd67d] shadow-[0_0_0_5px_rgba(155,214,125,0.1)]" />
-          <span className="flex flex-col">
-            <strong className="text-[10px] text-[#8fa9aa]">
-              Data Refresh: {shortDate(summary.sourceRetrievedAt.slice(0, 10))}
-            </strong>
+          <span className="flex flex-col leading-none">
+            <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.12em] text-[#8fa9aa]">
+              Weekly data refresh
+            </span>
+            <time
+              className="mt-1 whitespace-nowrap text-[11px] font-semibold text-[#d8e7e5]"
+              dateTime={summary.sourceRetrievedAt}
+            >
+              {shortDate(summary.sourceRetrievedAt.slice(0, 10))}
+            </time>
           </span>
         </div>
         <button
