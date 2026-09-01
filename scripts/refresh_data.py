@@ -6,6 +6,7 @@ Uses only the Python standard library so the scheduled workflow stays portable.
 from __future__ import annotations
 
 import hashlib
+from calendar import monthrange
 from html.parser import HTMLParser
 import json
 import re
@@ -14,7 +15,7 @@ import time
 import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,6 +55,17 @@ FIELDS = "|".join([
 ])
 ACTIVE = {"RECRUITING", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION"}
 PHASE_ORDER = {"EARLY_PHASE1": 0.5, "PHASE1": 1, "PHASE2": 2, "PHASE3": 3, "PHASE4": 4, "NA": 0}
+
+
+def add_months(value: date, months: int) -> date:
+    """Shift a date by calendar months, clamping to the target month end."""
+    year, month_index = divmod(value.year * 12 + value.month - 1 + months, 12)
+    month = month_index + 1
+    return value.replace(
+        year=year,
+        month=month,
+        day=min(value.day, monthrange(year, month)[1]),
+    )
 
 
 def fetch_json(url: str, attempts: int = 4) -> dict:
@@ -373,8 +385,7 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
     country_rows = [{"country":k,"activeTrials":len(v)} for k,v in country_trials.items()]
     country_rows.sort(key=lambda x:(-x["activeTrials"],x["country"]))
     today = datetime.fromisoformat(now.replace("Z", "+00:00")).date()
-    cutoff = today.replace(year=today.year + 1) if not (today.month == 2 and today.day == 29) else today.replace(year=today.year + 1, day=28)
-    cutoff = cutoff.replace(month=min(12, cutoff.month + 6)) if cutoff.month <= 6 else cutoff.replace(year=cutoff.year + 1, month=cutoff.month - 6)
+    cutoff = add_months(today, 18)
     late_stage = [x for x in summary["upcomingMilestones"] if x["phase"] == "PHASE3" and x["date"] <= cutoff.isoformat()]
     crowded = target_rows[0]
     literature = max(target_rows, key=lambda x: (x["recentPublications"], x["target"]))

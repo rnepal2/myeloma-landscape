@@ -1,6 +1,18 @@
 import unittest
+from datetime import date
 
-from scripts.refresh_data import snapshot_changes
+from scripts.refresh_data import add_months, snapshot_changes
+
+
+class AddMonthsTest(unittest.TestCase):
+    def test_clamps_month_end_across_leap_year(self):
+        self.assertEqual(date(2028, 2, 29), add_months(date(2026, 8, 31), 18))
+
+    def test_clamps_month_end_in_non_leap_year(self):
+        self.assertEqual(date(2027, 2, 28), add_months(date(2027, 1, 31), 1))
+
+    def test_preserves_valid_day(self):
+        self.assertEqual(date(2027, 7, 15), add_months(date(2026, 1, 15), 18))
 
 
 class SnapshotChangesTest(unittest.TestCase):
