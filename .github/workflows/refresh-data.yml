@@ -31,6 +31,8 @@ jobs:
           python-version: "3.12"
       - run: npm ci
       - run: python scripts/refresh_data.py
+        env:
+          NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}
       - run: python scripts/validate_data.py
       - run: npm run format:check
       - run: npm test

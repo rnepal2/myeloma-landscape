@@ -1,7 +1,9 @@
 import unittest
 from datetime import date
+from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
-from scripts.refresh_data import add_months, snapshot_changes
+from scripts.refresh_data import add_months, eutils_url, snapshot_changes
 
 
 class AddMonthsTest(unittest.TestCase):
@@ -13,6 +15,29 @@ class AddMonthsTest(unittest.TestCase):
 
     def test_preserves_valid_day(self):
         self.assertEqual(date(2027, 7, 15), add_months(date(2026, 1, 15), 18))
+
+
+class EutilsUrlTest(unittest.TestCase):
+    def test_requires_contact(self):
+        with patch.dict("os.environ", {"NCBI_EMAIL": ""}):
+            with self.assertRaisesRegex(RuntimeError, "NCBI_EMAIL is required"):
+                eutils_url("esearch.fcgi", {"db": "pubmed"})
+
+    def test_identifies_pubmed_requests(self):
+        with patch.dict("os.environ", {"NCBI_EMAIL": "contact@example.org"}):
+            url = eutils_url("esearch.fcgi", {"db": "pubmed", "term": "multiple myeloma"})
+
+        parsed = urlparse(url)
+        self.assertEqual("eutils.ncbi.nlm.nih.gov", parsed.hostname)
+        self.assertEqual(
+            {
+                "db": ["pubmed"],
+                "term": ["multiple myeloma"],
+                "tool": ["myeloma_landscape"],
+                "email": ["contact@example.org"],
+            },
+            parse_qs(parsed.query),
+        )
 
 
 class SnapshotChangesTest(unittest.TestCase):

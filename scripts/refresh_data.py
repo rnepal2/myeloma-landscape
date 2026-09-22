@@ -9,6 +9,7 @@ import hashlib
 from calendar import monthrange
 from html.parser import HTMLParser
 import json
+import os
 import re
 import sys
 import time
@@ -27,6 +28,7 @@ REGULATORY = json.loads((ROOT / "config" / "regulatory_events.json").read_text()
 API = "https://clinicaltrials.gov/api/v2/studies"
 FDA_ONCOLOGY = "https://www.fda.gov/drugs/resources-information-approved-drugs/oncology-cancerhematologic-malignancies-approval-notifications"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+EUTILS_TOOL = "myeloma_landscape"
 NIH_REPORTER = "https://api.reporter.nih.gov/v2/projects/search"
 DAILYMED_SPLS = "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json"
 EMA_MEDICINES = "https://www.ema.europa.eu/en/documents/report/medicines-output-medicines_json-report_en.json"
@@ -66,6 +68,18 @@ def add_months(value: date, months: int) -> date:
         month=month,
         day=min(value.day, monthrange(year, month)[1]),
     )
+
+
+def ncbi_contact() -> str:
+    contact = os.environ.get("NCBI_EMAIL", "").strip()
+    if not contact:
+        raise RuntimeError("NCBI_EMAIL is required for PubMed E-utilities requests")
+    return contact
+
+
+def eutils_url(endpoint: str, params: dict[str, str]) -> str:
+    query = urllib.parse.urlencode({**params, "tool": EUTILS_TOOL, "email": ncbi_contact()})
+    return f"{EUTILS}/{endpoint}?{query}"
 
 
 def fetch_json(url: str, attempts: int = 4) -> dict:
@@ -167,13 +181,13 @@ def fetch_fda_events() -> list[dict]:
 def fetch_pubmed_evidence() -> dict:
     query = '("multiple myeloma"[Title] OR "plasma cell myeloma"[Title])'
     params = {"db": "pubmed", "term": query, "retmode": "json", "retmax": "200", "sort": "pub date"}
-    search = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode(params)}")
+    search = fetch_json(eutils_url("esearch.fcgi", params))
     search_result = search.get("esearchresult", {})
     ids = search_result.get("idlist", [])
     if not ids:
         raise RuntimeError("PubMed returned no evidence records")
     time.sleep(0.4)
-    summaries = fetch_json(f"{EUTILS}/esummary.fcgi?{urllib.parse.urlencode({'db':'pubmed','id':','.join(ids),'retmode':'json'})}").get("result", {})
+    summaries = fetch_json(eutils_url("esummary.fcgi", {"db": "pubmed", "id": ",".join(ids), "retmode": "json"})).get("result", {})
     publications = []
     for pmid in ids:
         item = summaries.get(pmid, {})
@@ -202,7 +216,7 @@ def fetch_pubmed_evidence() -> dict:
     for year in range(current_year - 5, current_year + 1):
         time.sleep(0.4)
         year_query = f'{query} AND {year}[PDAT]'
-        count_payload = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode({'db':'pubmed','term':year_query,'retmode':'json','retmax':'0'})}")
+        count_payload = fetch_json(eutils_url("esearch.fcgi", {"db": "pubmed", "term": year_query, "retmode": "json", "retmax": "0"}))
         counts_by_year.append({"name": str(year), "value": int(count_payload.get("esearchresult", {}).get("count", 0))})
     journal_counter = Counter(pub["journal"] for pub in publications)
     window_start = current_year - 2
@@ -212,7 +226,7 @@ def fetch_pubmed_evidence() -> dict:
         target_scope = " OR ".join(f"{term}[Title/Abstract]" for term in terms)
         target_query = f"{disease_scope} AND ({target_scope}) AND {window_start}:{current_year}[PDAT]"
         time.sleep(0.34)
-        target_payload = fetch_json(f"{EUTILS}/esearch.fcgi?{urllib.parse.urlencode({'db':'pubmed','term':target_query,'retmode':'json','retmax':'0'})}")
+        target_payload = fetch_json(eutils_url("esearch.fcgi", {"db": "pubmed", "term": target_query, "retmode": "json", "retmax": "0"}))
         target_counts.append({"name": target, "value": int(target_payload.get("esearchresult", {}).get("count", 0))})
     target_counts.sort(key=lambda item: (-item["value"], item["name"]))
     grant_payload = {
@@ -575,6 +589,7 @@ def write_json(path: Path, value) -> None:
 
 
 def main() -> None:
+    ncbi_contact()
     OUT.mkdir(parents=True, exist_ok=True)
     previous = json.loads(PREVIOUS.read_text()) if PREVIOUS.exists() else None
     previous_events = json.loads(PREVIOUS_CHANGES.read_text()) if PREVIOUS_CHANGES.exists() else None

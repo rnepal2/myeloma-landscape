@@ -30,6 +30,10 @@ export function Footer() {
               Public-source records for multiple myeloma trials, therapies,
               publications, funding, regulatory actions, labels, and supply.
             </p>
+            <p className="mt-3 max-w-sm text-[11px] leading-5 text-[#859b9d]">
+              An independent project, not affiliated with or endorsed by Johnson
+              &amp; Johnson or the listed data providers.
+            </p>
           </div>
         </div>
         <div>
@@ -66,6 +70,19 @@ export function Footer() {
               </a>
             ))}
           </div>
+          <p className="mt-4 text-[11px] leading-5 text-[#859b9d]">
+            NCBI does not warrant its content or endorse products or services.
+            PubMed citation text may have third-party copyright.{" "}
+            <a
+              className="text-[#91a0ff] underline decoration-[#91a0ff]/40 underline-offset-2 hover:text-white"
+              href="https://www.ncbi.nlm.nih.gov/home/about/policies/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              NCBI disclaimer and copyright
+            </a>
+            .
+          </p>
         </div>
       </div>
     </footer>
