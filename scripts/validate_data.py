@@ -2,6 +2,8 @@
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
+from datetime import date
+from calendar import monthrange
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "public" / "data"
@@ -17,7 +19,7 @@ def fail(message):
     raise SystemExit(f"DATA VALIDATION FAILED: {message}")
 
 def main():
-    required = ["summary", "trials", "assets", "changes", "regulatory", "evidence", "market-context", "strategic"]
+    required = ["summary", "trials", "assets", "changes", "regulatory", "evidence", "market-context", "strategic", "sources"]
     payload = {}
     for name in required:
         path = DATA / f"{name}.json"
@@ -40,17 +42,26 @@ def main():
     broken = [a["id"] for a in assets if not set(a["trialIds"]).issubset(id_set)]
     if broken: fail(f"broken asset references: {broken[:3]}")
     if any(not a.get("trialIds") for a in assets): fail("asset without a linked ClinicalTrials.gov study")
+    trial_map = {t["nctId"]: t for t in trials}
+    for asset in assets:
+        linked = [trial_map[nct] for nct in set(asset["trialIds"])]
+        active_linked = [t for t in linked if t["studyType"] == "INTERVENTIONAL" and t["status"] in ACTIVE]
+        if asset["activeTrialCount"] != len(active_linked): fail(f"asset active studies not distinct: {asset['id']}")
+        if asset["recruitingTrialCount"] != sum(t["status"] == "RECRUITING" for t in active_linked): fail(f"asset recruiting studies not distinct: {asset['id']}")
+        if asset["statusCounts"] != dict(Counter(t["status"] for t in linked)): fail(f"asset status counts mismatch: {asset['id']}")
+    if any(not isinstance(t.get("countries"), list) for t in trials): fail("complete country sets missing")
+    if any(not {loc["country"] for loc in t["locations"] if loc.get("country")}.issubset(set(t["countries"])) for t in trials): fail("location country missing from country set")
     changes = payload["changes"]
     if not 1 <= len(changes) <= 50: fail(f"unexpected registry change count {len(changes)}")
     change_ids = [event.get("id") for event in changes]
     if len(change_ids) != len(set(change_ids)) or None in change_ids: fail("registry change IDs are missing or duplicated")
     change_records = [(event.get("nctId"), event.get("date")) for event in changes]
     if len(change_records) != len(set(change_records)): fail("registry changes repeat a study and date")
-    if any(event.get("type") not in {"RECENT_UPDATE", "NEW_STUDY", "STATUS_CHANGE"} for event in changes): fail("registry change type invalid")
+    if any(event.get("type") not in {"RECENT_UPDATE", "NEW_STUDY", "STATUS_CHANGE", "DATE_CHANGE", "RESULTS_POSTED"} for event in changes): fail("registry change type invalid")
     if any(event.get("severity") not in {"high", "medium", "low"} for event in changes): fail("registry change severity invalid")
     if any(not event.get("sourceUrl") or not event.get("observedAt") or not event.get("date") for event in changes): fail("registry change provenance incomplete")
     severity_order = {"high": 0, "medium": 1, "low": 2}
-    type_priority = {"RECENT_UPDATE": 0, "NEW_STUDY": 1, "STATUS_CHANGE": 2}
+    type_priority = {"RECENT_UPDATE": 0, "NEW_STUDY": 1, "DATE_CHANGE": 2, "RESULTS_POSTED": 3, "STATUS_CHANGE": 4}
     expected_change_order = sorted(changes, key=lambda event: severity_order[event["severity"]])
     expected_change_order.sort(key=lambda event: type_priority[event["type"]], reverse=True)
     expected_change_order.sort(key=lambda event: event["date"], reverse=True)
@@ -69,7 +80,7 @@ def main():
     if evidence.get("grantCount", 0) < 25 or not evidence.get("grants"): fail("NIH RePORTER snapshot incomplete")
     grant_ids = [g.get("id") for g in evidence["grants"]]
     if len(grant_ids) != len(set(grant_ids)): fail("NIH application IDs are duplicated")
-    if evidence["grantCount"] < len(evidence["grants"]): fail("NIH result total is smaller than retrieved records")
+    if evidence["grantCount"] != len(evidence["grants"]): fail("NIH pagination incomplete or duplicate rows returned")
     if any(not g.get("id") or not g.get("sourceUrl") for g in evidence["grants"]): fail("NIH grant provenance incomplete")
     market = payload["market-context"]
     if len(market.get("dailyMedLabels", [])) < 10: fail("DailyMed label snapshot incomplete")
@@ -83,7 +94,7 @@ def main():
     strategic_targets = strategic["targetLandscape"]
     if len({x.get("target") for x in strategic_targets}) != len(strategic_targets): fail("strategic target rows duplicated")
     if any(x.get("activeTrials", 0) < x.get("recruitingTrials", 0) for x in strategic_targets): fail("recruiting target count exceeds active count")
-    if any(not 0 <= x.get("crowdingScore", -1) <= 100 for x in strategic_targets): fail("target activity index outside 0-100")
+    if strategic_targets != sorted(strategic_targets, key=lambda x: (-x["activeTrials"], x["target"])): fail("target rows not ordered by study count")
     expected_target_trials = defaultdict(set)
     for trial in active:
         families = {target_family(item.get("target")) for item in trial["interventions"]}
@@ -91,6 +102,24 @@ def main():
             expected_target_trials[family].add(trial["nctId"])
     for row in strategic_targets:
         if row["activeTrials"] != len(expected_target_trials[row["target"]]): fail(f"target active-trial mismatch for {row['target']}")
+    today = date.fromisoformat(summary["generatedAt"][:10])
+    year, month = divmod(today.year * 12 + today.month - 1 + 18, 12)
+    end = date(year, month + 1, min(today.day, monthrange(year, month + 1)[1]))
+    def overlaps(value):
+        if not value: return False
+        parts = value.split("-")
+        first = date.fromisoformat(value if len(parts) == 3 else value + "-01" if len(parts) == 2 else value + "-01-01")
+        last = first if len(parts) == 3 else date(first.year, first.month, monthrange(first.year, first.month)[1]) if len(parts) == 2 else date(first.year, 12, 31)
+        return first <= end and last >= today
+    expected_phase3 = {t["nctId"] for t in active if "PHASE3" in t["phases"] and overlaps(t.get("primaryCompletionDate"))}
+    if {t["nctId"] for t in strategic["lateStageMilestones"]} != expected_phase3: fail("Phase 3 window is incomplete")
+    expected_countries = {c for t in active for c in t["countries"]}
+    if {x["country"] for x in strategic["geographicFootprint"]} != expected_countries: fail("country coverage incomplete")
+    for item in strategic["geographicFootprint"]:
+        if item["activeTrials"] != sum(item["country"] in t["countries"] for t in active): fail("country study count mismatch")
+    sources = payload["sources"]["sources"]
+    if {x["id"] for x in sources} != {"clinicaltrials", "fda", "pubmed", "nih", "dailymed", "ema", "shortages"}: fail("source status inventory incomplete")
+    if any(x["status"] not in {"current", "fallback"} or not x.get("attemptedAt") or (x["status"] == "current" and not x.get("lastSuccessAt")) for x in sources): fail("invalid source status")
     sponsor_counts = Counter(t["sponsor"] for t in active)
     expected_top5_share = round(100 * sum(v for _, v in sponsor_counts.most_common(5)) / len(active), 1)
     if strategic["top5SponsorShare"] != expected_top5_share: fail("top-five sponsor share mismatch")

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { PageIntro } from "../components/ui/PageIntro";
 import { useAppData } from "../context/AppDataContext";
+import { SourceStatus } from "../components/ui/SourceStatus";
 
 const sources = [
   {
@@ -55,7 +56,7 @@ const sources = [
 ] as const;
 
 export function MethodologyPage() {
-  const { summary, evidence, market } = useAppData();
+  const { summary, evidence } = useAppData();
   const principles = [
     [
       Database,
@@ -70,21 +71,23 @@ export function MethodologyPage() {
     [
       GitCompareArrows,
       "Derived measures",
-      "Shares, target activity indices, date windows, and cross-source rows are deterministic calculations. They describe the retrieved records and do not rank clinical or commercial value.",
+      "Study counts use distinct registry IDs. Target groups can overlap when a study includes several therapies, including background treatments and comparators.",
     ],
     [
       ShieldCheck,
-      "Fail-closed publication",
-      "Required files, identifiers, references, source coverage, counts, and ranges are validated. A failed run does not replace the last accepted snapshot.",
+      "Refresh checks",
+      "Each weekly run checks identifiers, references and key calculations. If an optional source cannot be retrieved, its previous records are retained and marked below. A failed validation prevents publication.",
     ],
   ] as const;
 
   return (
     <section className="mx-auto max-w-[1040px] px-6 py-16">
       <PageIntro
-        title="How records are retrieved, classified, and summarized"
-        copy="The site separates source records, reviewed classifications, and deterministic derived measures so that each displayed number has a defined scope."
+        title="Sources, definitions and limitations"
+        copy="What the site includes, how records are grouped, and where coverage is limited."
       />
+      <h2 className="mb-2 text-lg font-semibold">Source retrieval status</h2>
+      <SourceStatus />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {principles.map(([Icon, title, copy]) => (
@@ -134,7 +137,7 @@ export function MethodologyPage() {
       <section className="mt-14 grid gap-5 lg:grid-cols-[1.05fr_.95fr]">
         <div>
           <h2 className="[font-family:Newsreader] text-[30px] font-medium text-[#0b292f]">
-            Current data contract
+            Snapshot details
           </h2>
           <dl className="mt-4 overflow-hidden rounded-lg border border-[#dbe5e1] bg-white">
             {[
@@ -200,10 +203,11 @@ export function MethodologyPage() {
             medical advice, clinical decision support, regulatory advice,
             market-share reporting, investment advice, or a validated commercial
             intelligence product. Source records may be incomplete, delayed, or
-            revised by their publishers. Current market-context sources were
-            last refreshed with the accepted snapshot; FDA shortage source
-            metadata is
-            {market.shortageSourceUpdatedAt ? " present" : " unavailable"}.
+            revised by their publishers. The retrieval dates above apply to each
+            source separately. Therapy entities may include unresolved registry
+            names and regimen strings; they are not a count of distinct
+            development programs. A highest study phase does not establish a
+            medicine's approval status.
           </p>
         </div>
       </div>

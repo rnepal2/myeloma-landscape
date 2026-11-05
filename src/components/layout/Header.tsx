@@ -4,10 +4,11 @@ import { NavLink, useLocation } from "react-router-dom";
 import { navigation } from "../../app/navigation";
 import { LandscapeMark } from "../brand/LandscapeMark";
 import { useAppData } from "../../context/AppDataContext";
-import { cx, shortDate } from "../../lib/format";
+import { cx, snapshotDate } from "../../lib/format";
 
 export function Header() {
-  const { summary } = useAppData();
+  const { summary, sources } = useAppData();
+  const partial = sources.sources.some((item) => item.status === "fallback");
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -52,10 +53,10 @@ export function Header() {
           </span>
           <span className="flex flex-col">
             <strong className="text-sm tracking-[-0.01em] text-white">
-              Myeloma Intelligence
+              Myeloma Landscape
             </strong>
             <small className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#8fa9aa]">
-              Landscape Radar
+              Trials & research
             </small>
           </span>
         </NavLink>
@@ -99,16 +100,18 @@ export function Header() {
           ))}
         </nav>
         <div className="ml-auto hidden items-center gap-3 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,.1)] backdrop-blur-xl lg:flex">
-          <span className="size-2 rounded-full bg-[#9bd67d] shadow-[0_0_0_5px_rgba(155,214,125,0.1)]" />
+          <span
+            className={`size-2 rounded-full ${partial ? "bg-[#e2b980]" : "bg-[#91a0ff]"}`}
+          />
           <span className="flex flex-col leading-none">
             <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.12em] text-[#8fa9aa]">
-              Weekly data refresh
+              Weekly snapshot{partial ? " · partial refresh" : ""}
             </span>
             <time
               className="mt-1 whitespace-nowrap text-[11px] font-semibold text-[#d8e7e5]"
               dateTime={summary.sourceRetrievedAt}
             >
-              {shortDate(summary.sourceRetrievedAt.slice(0, 10))}
+              {snapshotDate(summary.sourceRetrievedAt)}
             </time>
           </span>
         </div>
@@ -116,6 +119,7 @@ export function Header() {
           className="ml-auto grid size-10 place-items-center rounded-full border border-white/10 text-[#d8e7e5] md:hidden"
           onClick={() => setOpen(!open)}
           aria-label="Toggle navigation"
+          aria-expanded={open}
         >
           {open ? <X size={19} /> : <Menu size={19} />}
         </button>
