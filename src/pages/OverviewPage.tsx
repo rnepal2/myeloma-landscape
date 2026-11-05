@@ -11,8 +11,8 @@ import { prettyEnum, shortDate, snapshotDate } from "../lib/format";
 export function OverviewPage() {
   const { summary, strategic, changes, regulatory } = useAppData();
   return (
-    <section className="mx-auto max-w-[1200px] px-6 py-12 sm:py-16">
-      <h1 className="max-w-4xl text-balance [font-family:Newsreader] text-4xl font-medium leading-[1.05] tracking-[-0.03em] sm:text-6xl">
+    <section className="mx-auto max-w-[1200px] px-6 py-10 sm:py-12">
+      <h1 className="max-w-3xl text-balance [font-family:Newsreader] text-4xl font-medium leading-[1.05] tracking-[-0.03em] sm:text-5xl">
         Multiple myeloma trials and{" "}
         <span className="text-[#91a0ff]">research updates.</span>
       </h1>
@@ -34,26 +34,29 @@ export function OverviewPage() {
           Browse therapies and targets
         </Link>
       </div>
-      <div className="my-10 grid overflow-hidden rounded-lg border border-white/10 sm:grid-cols-3">
+      <div className="my-7 grid grid-cols-3 overflow-hidden rounded-lg border border-white/10">
         <MetricCard
-          label="Active interventional studies"
+          label="Active studies"
           value={summary.activeTrialCount.toLocaleString()}
           note="Four active registry statuses"
           accent
+          compact
         />
         <MetricCard
-          label="Currently recruiting"
+          label="Recruiting"
           value={summary.recruitingTrialCount.toLocaleString()}
           note="Recruiting interventional studies"
+          compact
         />
         <MetricCard
-          label="Phase 3 completion dates"
+          label="Phase 3 dates"
           value={strategic.lateStageMilestones.length}
           note="Registered dates within 18 months"
+          compact
         />
       </div>
       <SourceStatus ids={["clinicaltrials"]} />
-      <div className="mt-12 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
+      <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <div>
           <SectionHeading
             title="Recent registry changes"
