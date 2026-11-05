@@ -30,7 +30,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci
-      - run: python scripts/refresh_data.py
+      - name: Retrieve a complete snapshot
+        run: |
+          for attempt in 1 2 3; do
+            if python scripts/refresh_data.py; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep 30
+            fi
+          done
+          exit 1
         env:
           NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}
       - run: python scripts/validate_data.py

@@ -11,7 +11,9 @@ from html.parser import HTMLParser
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -637,7 +639,13 @@ def write_json(path: Path, value) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
-def main() -> None:
+def require_complete_sources(sources: list[dict]) -> None:
+    failed = [source["name"] for source in sources if source["status"] != "current"]
+    if failed:
+        raise RuntimeError(f"Refresh not published: retrieval failed for {', '.join(failed)}. The existing snapshot is unchanged.")
+
+
+def build_snapshot() -> None:
     ncbi_contact()
     OUT.mkdir(parents=True, exist_ok=True)
     previous = json.loads(PREVIOUS.read_text()) if PREVIOUS.exists() else None
@@ -706,7 +714,36 @@ def main() -> None:
     strategic = build_strategic_intelligence(trials, assets, summary, evidence, now)
     write_json(OUT / "strategic.json", strategic)
     write_json(source_path, {"generatedAt": now, "sources": source_states})
+    require_complete_sources(source_states)
     print(f"Built {len(trials):,} trials, {len(assets):,} assets, version {version}")
+
+
+def main() -> None:
+    global OUT, PREVIOUS, PREVIOUS_CHANGES
+    published = OUT
+    old_previous, old_changes = PREVIOUS, PREVIOUS_CHANGES
+    # Fetch into a staging directory so an unavailable source cannot modify the
+    # accepted files, even when the script is run directly outside Actions.
+    with tempfile.TemporaryDirectory(prefix="myeloma-refresh-") as folder:
+        staged = Path(folder) / "data"
+        shutil.copytree(published, staged)
+        OUT, PREVIOUS, PREVIOUS_CHANGES = staged, staged / "trials.json", staged / "changes.json"
+        try:
+            build_snapshot()
+            if __package__:
+                from . import validate_data
+            else:
+                import validate_data
+            previous_data = validate_data.DATA
+            try:
+                validate_data.DATA = staged
+                validate_data.main()
+            finally:
+                validate_data.DATA = previous_data
+            for source in staged.glob("*.json"):
+                shutil.copy2(source, published / source.name)
+        finally:
+            OUT, PREVIOUS, PREVIOUS_CHANGES = published, old_previous, old_changes
 
 
 if __name__ == "__main__":

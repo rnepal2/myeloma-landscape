@@ -8,7 +8,13 @@ import { cx, snapshotDate } from "../../lib/format";
 
 export function Header() {
   const { summary, sources } = useAppData();
-  const partial = sources.sources.some((item) => item.status === "fallback");
+  const successfulDates = sources.sources
+    .map((source) => source.lastSuccessAt)
+    .filter((value): value is string => Boolean(value))
+    .sort();
+  const refreshAt = successfulDates[0] ?? summary.sourceRetrievedAt;
+  const overdue =
+    Date.now() - new Date(refreshAt).valueOf() > 9 * 24 * 60 * 60 * 1000;
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -101,17 +107,17 @@ export function Header() {
         </nav>
         <div className="ml-auto hidden items-center gap-3 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,.1)] backdrop-blur-xl lg:flex">
           <span
-            className={`size-2 rounded-full ${partial ? "bg-[#e2b980]" : "bg-[#91a0ff]"}`}
+            className={`size-2 rounded-full ${overdue ? "bg-[#e2b980]" : "bg-[#91a0ff]"}`}
           />
           <span className="flex flex-col leading-none">
             <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.12em] text-[#8fa9aa]">
-              Weekly snapshot{partial ? " · partial refresh" : ""}
+              {overdue ? "Weekly refresh delayed" : "Weekly data refresh"}
             </span>
             <time
               className="mt-1 whitespace-nowrap text-[11px] font-semibold text-[#d8e7e5]"
-              dateTime={summary.sourceRetrievedAt}
+              dateTime={refreshAt}
             >
-              {snapshotDate(summary.sourceRetrievedAt)}
+              {snapshotDate(refreshAt)}
             </time>
           </span>
         </div>

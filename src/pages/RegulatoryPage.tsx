@@ -5,7 +5,6 @@ import { PageIntro } from "../components/ui/PageIntro";
 import { Pagination } from "../components/ui/Pagination";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { SourceNote } from "../components/ui/SourceNote";
-import { SourceStatus } from "../components/ui/SourceStatus";
 import { useAppData } from "../context/AppDataContext";
 import { shortDate } from "../lib/format";
 
@@ -38,17 +37,6 @@ export function RegulatoryPage() {
       <PageIntro
         title="Follow approvals, labels, European status, and supply"
         copy="Separate source views cover FDA oncology actions, DailyMed label versions, EMA medicine status, and current FDA shortage records."
-      />
-      <SourceStatus
-        ids={
-          tab === "fda"
-            ? ["fda"]
-            : tab === "labels"
-              ? ["dailymed"]
-              : tab === "europe"
-                ? ["ema"]
-                : ["shortages"]
-        }
       />
       <div className="mb-6 grid overflow-hidden rounded-lg border border-[#dbe5e1] bg-white sm:grid-cols-2 lg:grid-cols-4">
         {[
