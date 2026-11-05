@@ -26,12 +26,13 @@
     {"name":"Venetoclax","aliases":["venetoclax","venclexta","abt-199"],"target":"BCL-2","modality":"Small molecule"},
     {"name":"Dexamethasone","aliases":["dexamethasone"],"target":"Glucocorticoid receptor","modality":"Corticosteroid"},
     {"name":"Cyclophosphamide","aliases":["cyclophosphamide","cytoxan"],"target":"DNA alkylation","modality":"Chemotherapy"},
-    {"name":"Melphalan","aliases":["melphalan","evomela","alkeran"],"target":"DNA alkylation","modality":"Chemotherapy"}
+    {"name":"Melphalan","aliases":["melphalan","evomela","alkeran"],"target":"DNA alkylation","modality":"Chemotherapy"},
+    {"name":"Inobrodib","aliases":["inobrodib","ccs1477","ccs-1477"],"target":"p300/CBP","modality":"Small molecule","sourceUrl":"https://www.cellcentric.com/"}
   ],
   "target_rules": [
-    {"pattern":"bcma|b-cell maturation antigen","value":"BCMA"},{"pattern":"gprc5d","value":"GPRC5D"},{"pattern":"fcrh5|fc rh5","value":"FcRH5"},{"pattern":"cd38","value":"CD38"},{"pattern":"slamf7|cs1","value":"SLAMF7"},{"pattern":"cereblon|celmod","value":"Cereblon"},{"pattern":"xpo1","value":"XPO1"},{"pattern":"bcl-2|bcl2","value":"BCL-2"}
+    {"pattern":"(?<![a-z0-9])(?:bcma|b-cell maturation antigen)(?![a-z0-9])","value":"BCMA"},{"pattern":"(?<![a-z0-9])gprc5d(?![a-z0-9])","value":"GPRC5D"},{"pattern":"(?<![a-z0-9])(?:fcrh5|fc rh5)(?![a-z0-9])","value":"FcRH5"},{"pattern":"(?<![a-z0-9])cd38(?![a-z0-9])","value":"CD38"},{"pattern":"(?<![a-z0-9])(?:slamf7|cs1)(?![a-z0-9])","value":"SLAMF7"},{"pattern":"(?<![a-z0-9])(?:cereblon|celmod)(?![a-z0-9])","value":"Cereblon"},{"pattern":"(?<![a-z0-9])xpo1(?![a-z0-9])","value":"XPO1"},{"pattern":"(?<![a-z0-9])(?:bcl-2|bcl2)(?![a-z0-9])","value":"BCL-2"}
   ],
   "modality_rules": [
-    {"pattern":"car[- ]?t|chimeric antigen receptor","value":"CAR-T cell therapy"},{"pattern":"bispecific|cd3","value":"Bispecific antibody"},{"pattern":"antibody.drug conjugate|\badc\b","value":"Antibody–drug conjugate"},{"pattern":"monoclonal antibody|mab$","value":"Monoclonal antibody"},{"pattern":"vaccine","value":"Vaccine"}
+    {"pattern":"car[- ]?t|chimeric antigen receptor","value":"CAR-T cell therapy"},{"pattern":"bispecific|cd3","value":"Bispecific antibody"},{"pattern":"antibody.drug conjugate|\\badc\\b","value":"Antibody–drug conjugate"},{"pattern":"monoclonal antibody|mab$","value":"Monoclonal antibody"},{"pattern":"vaccine","value":"Vaccine"}
   ]
 }

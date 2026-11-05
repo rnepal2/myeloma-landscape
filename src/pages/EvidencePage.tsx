@@ -16,6 +16,7 @@ import { Pagination } from "../components/ui/Pagination";
 import { SearchBox } from "../components/ui/SearchBox";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { SourceNote } from "../components/ui/SourceNote";
+import { SourceStatus } from "../components/ui/SourceStatus";
 import { useAppData } from "../context/AppDataContext";
 import { shortDate } from "../lib/format";
 
@@ -24,6 +25,7 @@ export function EvidencePage() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [grantPage, setGrantPage] = useState(1);
+  const [grantQuery, setGrantQuery] = useState("");
   const pageSize = 8;
   const grantPageSize = 4;
   const filtered = evidence.publications.filter((publication) =>
@@ -35,7 +37,12 @@ export function EvidencePage() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const grantItems = evidence.grants.slice(
+  const filteredGrants = evidence.grants.filter((grant) =>
+    `${grant.title} ${grant.organization} ${grant.principalInvestigators.join(" ")}`
+      .toLowerCase()
+      .includes(grantQuery.toLowerCase()),
+  );
+  const grantItems = filteredGrants.slice(
     (grantPage - 1) * grantPageSize,
     grantPage * grantPageSize,
   );
@@ -46,7 +53,12 @@ export function EvidencePage() {
       ? Math.round((lastComplete.value / prior.value - 1) * 100)
       : 0;
   const currentFunding = evidence.grantAwardsByYear.at(-1)?.value ?? 0;
+  const fundingYear = evidence.grantAwardsByYear.at(-1)?.name;
+  const fundingRecords = evidence.grants.filter(
+    (grant) => String(grant.fiscalYear) === fundingYear,
+  ).length;
   useEffect(() => setPage(1), [query]);
+  useEffect(() => setGrantPage(1), [grantQuery]);
 
   return (
     <section className="mx-auto max-w-[1200px] px-6 py-16">
@@ -54,6 +66,7 @@ export function EvidencePage() {
         title="PubMed literature and NIH-funded projects"
         copy="The page combines annual PubMed counts, target-linked query counts, a recent citation sample, and NIH RePORTER projects. These are record counts and award amounts, not measures of evidence quality or clinical benefit."
       />
+      <SourceStatus ids={["pubmed", "nih"]} />
       <div className="mb-5 grid overflow-hidden rounded-lg border border-[#dbe5e1] shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Indexed publication corpus"
@@ -71,9 +84,17 @@ export function EvidencePage() {
           note="Disease-title matches across three fiscal years"
         />
         <MetricCard
-          label="Current-year awards"
-          value={`$${(currentFunding / 1_000_000).toFixed(1)}M`}
-          note="NIH RePORTER award actions"
+          label={`FY${fundingYear} retrieved awards`}
+          value={
+            fundingRecords
+              ? `$${(currentFunding / 1_000_000).toFixed(1)}M`
+              : "No records"
+          }
+          note={
+            fundingRecords
+              ? "Retrieved title-matched award records"
+              : "No matching records returned for this FY"
+          }
         />
       </div>
       <div className="mb-16 grid gap-4 lg:grid-cols-[1.25fr_.8fr]">
@@ -82,7 +103,8 @@ export function EvidencePage() {
             Publication volume
           </h2>
           <p className="mt-1 text-xs text-[#65797b]">
-            Annual PubMed records with multiple myeloma in the citation title.
+            Annual PubMed title matches. The current calendar year is
+            incomplete.
           </p>
           <div className="mt-5 h-72">
             <ResponsiveContainer>
@@ -144,8 +166,15 @@ export function EvidencePage() {
 
       <SectionHeading
         title="NIH-funded multiple myeloma projects"
-        copy="Projects require multiple myeloma in the project title and cover the current and two prior fiscal years. Amounts are the award values returned for each application record."
+        copy={`Title-matched project records for FY${evidence.grantAwardsByYear[0]?.name}–FY${fundingYear}. Amounts are the award values returned per application; the current fiscal year is incomplete.`}
       />
+      <div className="mb-4 max-w-2xl">
+        <SearchBox
+          value={grantQuery}
+          onChange={setGrantQuery}
+          placeholder="Search project, organization, or investigator"
+        />
+      </div>
       <div className="overflow-hidden rounded-lg border border-[#dbe5e1] bg-white">
         {grantItems.map((grant) => (
           <article
@@ -185,7 +214,7 @@ export function EvidencePage() {
       </div>
       <Pagination
         page={grantPage}
-        total={evidence.grants.length}
+        total={filteredGrants.length}
         pageSize={grantPageSize}
         onPage={setGrantPage}
         label="funding records"
@@ -193,7 +222,7 @@ export function EvidencePage() {
 
       <SectionHeading
         title="Browse recent PubMed records"
-        copy="Search citation titles, journals, authors, reviewed therapy names, and deterministically matched targets."
+        copy="Search the 200 retrieved citations by title, journal, author or mapped therapy. Publication dates can reflect a future journal issue and do not necessarily indicate when a record was added to PubMed."
       />
       <div className="mb-3 max-w-2xl">
         <SearchBox

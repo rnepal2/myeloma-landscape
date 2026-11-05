@@ -70,6 +70,27 @@ def add_months(value: date, months: int) -> date:
     )
 
 
+def fiscal_year(value: date) -> int:
+    return value.year + (value.month >= 10)
+
+
+def date_bounds(value: str) -> tuple[date, date]:
+    """Preserve uncertainty in year-only and month-only registry dates."""
+    parts = [int(part) for part in value.split("-")]
+    year = parts[0]
+    month = parts[1] if len(parts) > 1 else 1
+    first = date(year, month, parts[2] if len(parts) > 2 else 1)
+    last = first if len(parts) == 3 else date(year, month, monthrange(year, month)[1]) if len(parts) == 2 else date(year, 12, 31)
+    return first, last
+
+
+def date_in_window(value: str | None, start: date, end: date) -> bool:
+    if not value:
+        return False
+    first, last = date_bounds(value)
+    return first <= end and last >= start
+
+
 def ncbi_contact() -> str:
     contact = os.environ.get("NCBI_EMAIL", "").strip()
     if not contact:
@@ -87,7 +108,10 @@ def fetch_json(url: str, attempts: int = 4) -> dict:
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "myeloma-landscape-radar/0.1 (public research project)"})
             with urllib.request.urlopen(req, timeout=45) as response:
-                return json.load(response)
+                payload = json.load(response)
+            if isinstance(payload, dict) and (payload.get("error") or payload.get("ERROR") or payload.get("esearchresult", {}).get("ERROR")):
+                raise RuntimeError("Upstream API returned an error payload")
+            return payload
         except Exception:
             if attempt == attempts - 1:
                 raise
@@ -152,7 +176,7 @@ class FdaTableParser(HTMLParser):
 
 
 def fetch_fda_events() -> list[dict]:
-    req = urllib.request.Request(FDA_ONCOLOGY, headers={"User-Agent": "myeloma-landscape-radar/0.1 (public research project)"})
+    req = urllib.request.Request(FDA_ONCOLOGY, headers={"User-Agent": "Mozilla/5.0 (compatible; MyelomaLandscape/1.0; +https://myeloma-landscape.pages.dev/)"})
     with urllib.request.urlopen(req, timeout=45) as response:
         html = response.read().decode("utf-8", "replace")
     parser = FdaTableParser(); parser.feed(html)
@@ -164,12 +188,12 @@ def fetch_fda_events() -> list[dict]:
             date = datetime.strptime(raw_date.strip(), "%m/%d/%Y").date().isoformat()
         except ValueError:
             continue
-        classified = classify_intervention(title, "BIOLOGICAL")
+        matched_assets = [asset for asset in ONTOLOGY["assets"] if any(re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", title, re.I) for alias in asset["aliases"])]
         direct_url = urllib.parse.urljoin("https://www.fda.gov", href or FDA_ONCOLOGY)
         events.append({
             "id": slug(f"fda-{date}-{title}"), "date": date,
-            "asset": classified["canonicalName"] if classified["canonicalName"] != title else "Multiple myeloma therapy",
-            "title": title, "detail": detail, "target": classified.get("target", "See FDA source"),
+            "asset": " + ".join(asset["name"] for asset in matched_assets) or "See FDA source",
+            "title": title, "detail": detail, "target": " / ".join(sorted({asset["target"] for asset in matched_assets})) or "See FDA source",
             "eventType": "Accelerated approval" if "accelerated approval" in title.lower() else "Approval",
             "sourceUrl": direct_url,
         })
@@ -229,14 +253,35 @@ def fetch_pubmed_evidence() -> dict:
         target_payload = fetch_json(eutils_url("esearch.fcgi", {"db": "pubmed", "term": target_query, "retmode": "json", "retmax": "0"}))
         target_counts.append({"name": target, "value": int(target_payload.get("esearchresult", {}).get("count", 0))})
     target_counts.sort(key=lambda item: (-item["value"], item["name"]))
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "query": query, "totalCount": int(search_result.get("count", 0)), "sampleSize": len(publications),
+        "countsByYear": counts_by_year, "targetMomentum": target_counts, "targetCountWindow": f"{window_start}–{current_year}",
+        "topJournals": [{"name": k, "value": v} for k, v in journal_counter.most_common(8)],
+        "publications": publications,
+        "methodology": f"The literature explorer searches the 200 retrieved PubMed citations with multiple myeloma or plasma cell myeloma in the title. Target queries use reviewed title/abstract terms during {window_start}–{current_year} and can overlap. NIH records require multiple myeloma in the project title; the displayed fiscal-year range applies to the retrieved funding snapshot."
+    }
+
+
+def fetch_nih_grants() -> dict:
+    current_fy = fiscal_year(datetime.now(timezone.utc).date())
     grant_payload = {
-        "criteria": {"advanced_text_search": {"operator": "and", "search_field": "projecttitle", "search_text": '"multiple myeloma"'}, "fiscal_years": [current_year - 2, current_year - 1, current_year]},
+        "criteria": {"advanced_text_search": {"operator": "and", "search_field": "projecttitle", "search_text": '"multiple myeloma"'}, "fiscal_years": [current_fy - 2, current_fy - 1, current_fy]},
         "include_fields": ["ApplId", "ProjectTitle", "Organization", "ProjectNum", "FiscalYear", "AwardAmount", "AwardNoticeDate", "ProjectStartDate", "ProjectEndDate", "PrincipalInvestigators", "ProjectDetailUrl"],
         "offset": 0, "limit": 250, "sort_field": "award_notice_date", "sort_order": "desc"
     }
     grant_response = post_json(NIH_REPORTER, grant_payload)
+    grant_items = list(grant_response.get("results", []))
+    total_grants = int(grant_response.get("meta", {}).get("total", len(grant_items)))
+    while len(grant_items) < total_grants:
+        grant_payload["offset"] = len(grant_items)
+        page = post_json(NIH_REPORTER, grant_payload).get("results", [])
+        if not page:
+            raise RuntimeError("NIH RePORTER pagination ended before all records were retrieved")
+        grant_items.extend(page)
+        time.sleep(0.4)
     grants = []
-    for item in grant_response.get("results", []):
+    for item in grant_items:
         org = item.get("organization") or {}
         grants.append({
             "id": str(item.get("appl_id")), "title": item.get("project_title", "Untitled project"),
@@ -250,14 +295,9 @@ def fetch_pubmed_evidence() -> dict:
     for grant in grants:
         grant_years[str(grant["fiscalYear"])] += grant["awardAmount"]
     return {
-        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "query": query, "totalCount": int(search_result.get("count", 0)), "sampleSize": len(publications),
-        "countsByYear": counts_by_year, "targetMomentum": target_counts, "targetCountWindow": f"{window_start}–{current_year}",
-        "topJournals": [{"name": k, "value": v} for k, v in journal_counter.most_common(8)],
-        "publications": publications,
-        "grantCount": int(grant_response.get("meta", {}).get("total", len(grants))), "grants": grants,
-        "grantAwardsByYear": [{"name": str(y), "value": grant_years[str(y)]} for y in range(current_year - 2, current_year + 1)],
-        "methodology": f"The literature explorer contains the 200 most recent PubMed records with multiple myeloma or plasma cell myeloma in the citation title. Target-level counts use separate PubMed queries across titles and abstracts for reviewed target and therapy terms during {window_start}–{current_year}; target counts can overlap and are not measures of evidence quality or clinical benefit. NIH RePORTER records require multiple myeloma in the project title and cover the current and two prior fiscal years."
+        "grantsGeneratedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "grantCount": total_grants, "grants": grants, "currentFiscalYear": current_fy,
+        "grantAwardsByYear": [{"name": str(y), "value": grant_years[str(y)]} for y in range(current_fy - 2, current_fy + 1)],
     }
 
 
@@ -358,8 +398,8 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
             if "PHASE3" in trial["phases"]: target_phase3[family].add(trial["nctId"])
         for modality in modalities:
             modality_trials[modality].add(trial["nctId"]); modality_sponsors[modality].add(trial["sponsor"])
-        for location in trial["locations"]:
-            if location.get("country"): country_trials[location["country"]].add(trial["nctId"])
+        for country in trial["countries"]:
+            country_trials[country].add(trial["nctId"])
     target_assets = defaultdict(set)
     for asset in assets:
         if asset["activeTrialCount"] <= 0: continue
@@ -379,14 +419,10 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
         grant_targets.update(x for x in matched if x)
     target_rows = []
     all_targets = set(target_trials) | set(target_assets) | set(evidence_targets) | set(grant_targets)
-    max_trials = max((len(x) for x in target_trials.values()), default=1)
-    max_assets = max((len(x) for x in target_assets.values()), default=1)
-    max_sponsors = max((len(x) for x in target_sponsors.values()), default=1)
     for target in all_targets:
         trials_n, assets_n, sponsors_n = len(target_trials[target]), len(target_assets[target]), len(target_sponsors[target])
-        crowding = round(100 * (0.5 * trials_n / max_trials + 0.3 * assets_n / max_assets + 0.2 * sponsors_n / max_sponsors))
-        target_rows.append({"target":target, "activeTrials":trials_n, "recruitingTrials":len(target_recruiting[target]), "phase3Trials":len(target_phase3[target]), "activeAssets":assets_n, "sponsors":sponsors_n, "recentPublications":evidence_targets[target], "recentGrants":grant_targets[target], "crowdingScore":crowding})
-    target_rows.sort(key=lambda x: (-x["crowdingScore"], x["target"]))
+        target_rows.append({"target":target, "activeTrials":trials_n, "recruitingTrials":len(target_recruiting[target]), "phase3Trials":len(target_phase3[target]), "activeAssets":assets_n, "sponsors":sponsors_n, "recentPublications":evidence_targets[target] if target in evidence_targets else None, "recentGrants":grant_targets[target]})
+    target_rows.sort(key=lambda x: (-x["activeTrials"], x["target"]))
     modality_rows = [{"modality":m, "activeTrials":len(modality_trials[m]), "activeAssets":len(modality_assets[m]), "sponsors":len(modality_sponsors[m])} for m in set(modality_trials) | set(modality_assets)]
     modality_rows.sort(key=lambda x: (-x["activeTrials"], x["modality"]))
     sponsor_counts = Counter(t["sponsor"] for t in active)
@@ -400,22 +436,22 @@ def build_strategic_intelligence(trials: list[dict], assets: list[dict], summary
     country_rows.sort(key=lambda x:(-x["activeTrials"],x["country"]))
     today = datetime.fromisoformat(now.replace("Z", "+00:00")).date()
     cutoff = add_months(today, 18)
-    late_stage = [x for x in summary["upcomingMilestones"] if x["phase"] == "PHASE3" and x["date"] <= cutoff.isoformat()]
+    late_stage = sorted([{"nctId": t["nctId"], "title": t["title"], "date": t["primaryCompletionDate"], "phase": "PHASE3", "sponsor": t["sponsor"]} for t in active if "PHASE3" in t["phases"] and date_in_window(t.get("primaryCompletionDate"), today, cutoff)], key=lambda x: x["date"])
     crowded = target_rows[0]
-    literature = max(target_rows, key=lambda x: (x["recentPublications"], x["target"]))
-    current_fy = datetime.now(timezone.utc).year
+    literature = max(target_rows, key=lambda x: (x["recentPublications"] or 0, x["target"]))
+    current_fy = evidence.get("currentFiscalYear") or max((int(row["name"]) for row in evidence.get("grantAwardsByYear", [])), default=fiscal_year(today))
     current_grants = [grant for grant in evidence["grants"] if grant["fiscalYear"] == current_fy]
     current_funding = sum(grant["awardAmount"] for grant in current_grants)
     funding_metric = f"${current_funding / 1_000_000:.1f}M" if current_funding >= 1_000_000 else f"${current_funding / 1_000:.0f}K"
     signals = [
         {"id":"target-activity","theme":"Registered target activity","metric":f"{crowded['activeTrials']} active trials","title":f"{crowded['target']} has the largest target-linked active-trial set","detail":f"The set contains {crowded['activeAssets']} classified active assets and {crowded['sponsors']} distinct lead sponsors in ClinicalTrials.gov.","tone":"amber"},
-        {"id":"publication-activity","theme":"Scientific literature","metric":f"{literature['recentPublications']:,} PubMed records","title":f"{literature['target']} has the highest target-linked literature count","detail":f"Count from reviewed title/abstract terms within the {evidence['targetCountWindow']} PubMed window; target query results can overlap.","tone":"teal"},
-        {"id":"nih-funding","theme":"Public funding","metric":f"{funding_metric} in FY{current_fy}","title":f"NIH RePORTER returned {len(current_grants)} current-fiscal-year records","detail":"Award amounts are summed from disease-title project records and may change as NIH updates the current fiscal year.","tone":"purple"},
+        {"id":"publication-activity","theme":"Scientific literature","metric":f"{literature['recentPublications']:,} PubMed records" if literature["recentPublications"] is not None else "Not queried","title":f"{literature['target']} has the highest target-linked literature count" if literature["recentPublications"] is not None else "Target-linked query counts are unavailable","detail":f"Count from reviewed title/abstract terms within the {evidence['targetCountWindow']} PubMed window; target query results can overlap.","tone":"teal"},
+        {"id":"nih-funding","theme":"Public funding","metric":f"{funding_metric} in FY{current_fy}","title":f"NIH RePORTER returned {len(current_grants)} FY{current_fy} records","detail":"Award amounts are summed from retrieved disease-title project records for the stated fiscal year; source status shows when those records were last retrieved.","tone":"purple"},
         {"id":"sponsor-concentration","theme":"Sponsor distribution","metric":f"{top5_share}% top-five share","title":"Share of active trials attributed to the five largest lead sponsors","detail":f"The denominator is {len(active)} active interventional studies across {len(sponsor_counts)} distinct registered lead sponsors.","tone":"blue"},
         {"id":"catalyst-window","theme":"Completion dates","metric":f"{len(late_stage)} Phase 3 dates","title":"Registered primary-completion dates within the next 18 months","detail":"Dates are sponsor-submitted estimates from ClinicalTrials.gov and can be revised.","tone":"purple"},
-        {"id":"global-footprint","theme":"Geographic coverage","metric":f"{len(country_rows)} countries","title":"Countries with a registered site in at least one active study","detail":f"The United States appears on {country_rows[0]['activeTrials'] if country_rows else 0} active studies; counts depend on registry location completeness.","tone":"blue"}
+        {"id":"global-footprint","theme":"Geographic coverage","metric":f"{len(country_rows)} countries","title":"Countries with a registered site in at least one active study","detail":f"The United States appears on {len(country_trials['United States'])} active studies; counts depend on registry location completeness.","tone":"blue"}
     ]
-    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"industrySponsors":industry_sponsors,"institutionSponsors":institution_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"landscapeMeasures":signals,"methodology":"Target rows combine distinct active ClinicalTrials.gov studies, classified active assets, distinct lead sponsors, target-linked PubMed query counts, and title-matched NIH project records. The activity index weights normalized active trials (50%), active assets (30%), and sponsors (20%). Source counts describe retrieved records; they are not forecasts or rankings of clinical or commercial value."}
+    return {"generatedAt":now,"targetLandscape":target_rows,"modalityLandscape":modality_rows,"topSponsors":top_sponsors,"industrySponsors":industry_sponsors,"institutionSponsors":institution_sponsors,"top5SponsorShare":top5_share,"geographicFootprint":country_rows,"lateStageMilestones":late_stage,"landscapeMeasures":signals,"methodology":"Target rows count distinct active interventional studies and linked intervention entities, registered lead sponsors, target-linked PubMed query counts, and title-matched NIH project records. A study can appear under several targets. Source counts are not measures of clinical or commercial value."}
 
 
 def compact_date(module: dict, key: str) -> str | None:
@@ -493,7 +529,7 @@ def normalize(raw: dict) -> dict:
         "primaryCompletionDate": compact_date(status, "primaryCompletionDateStruct"),
         "completionDate": compact_date(status, "completionDateStruct"),
         "enrollment": (design.get("enrollmentInfo") or {}).get("count"), "studyType": design.get("studyType", "UNKNOWN"),
-        "hasResults": bool(raw.get("hasResults")), "locations": locations[:12], "briefSummary": brief[:800],
+        "hasResults": bool(raw.get("hasResults")), "locations": locations[:12], "countries": sorted({location["country"] for location in locations if location.get("country")}), "briefSummary": brief[:800],
         "firstPosted": compact_date(status, "studyFirstPostDateStruct"), "lastUpdated": compact_date(status, "lastUpdatePostDateStruct"),
         "setting": infer_setting(title, brief), "sourceUrl": f"https://clinicaltrials.gov/study/{nct_id}"
     }
@@ -503,12 +539,17 @@ def make_assets(trials: list[dict]) -> list[dict]:
     groups = {}
     ignored = {"PLACEBO", "NO INTERVENTION", "STANDARD OF CARE"}
     for trial in trials:
+        seen_entities = set()
         for intervention in trial["interventions"]:
             if intervention["type"] not in {"DRUG", "BIOLOGICAL", "COMBINATION_PRODUCT"} or intervention["canonicalName"].upper() in ignored:
                 continue
             key = slug(intervention["canonicalName"])
             group = groups.setdefault(key, {"id": key, "name": intervention["canonicalName"], "aliases": set(), "target": intervention.get("target", "Unclassified"), "modality": intervention.get("modality", "Unclassified"), "trials": [], "sponsors": set(), "settings": set(), "statuses": Counter(), "phases": set(), "active": 0, "recruiting": 0})
-            group["aliases"].add(intervention["name"]); group["trials"].append(trial["nctId"]); group["sponsors"].add(trial["sponsor"]); group["settings"].add(trial["setting"]); group["statuses"][trial["status"]] += 1; group["phases"].update(trial["phases"])
+            group["aliases"].add(intervention["name"])
+            if key in seen_entities:
+                continue
+            seen_entities.add(key)
+            group["trials"].append(trial["nctId"]); group["sponsors"].add(trial["sponsor"]); group["settings"].add(trial["setting"]); group["statuses"][trial["status"]] += 1; group["phases"].update(trial["phases"])
             if trial["studyType"] == "INTERVENTIONAL" and trial["status"] in ACTIVE:
                 group["active"] += 1
             if trial["studyType"] == "INTERVENTIONAL" and trial["status"] == "RECRUITING":
@@ -517,7 +558,7 @@ def make_assets(trials: list[dict]) -> list[dict]:
     for g in groups.values():
         unique_trials = sorted(set(g["trials"]))
         statuses = g["statuses"]
-        result.append({"id": g["id"], "name": g["name"], "aliases": sorted(g["aliases"]), "target": g["target"], "modality": g["modality"], "trialCount": len(unique_trials), "activeTrialCount": g["active"], "recruitingTrialCount": g["recruiting"], "highestPhase": max(g["phases"] or {"NA"}, key=lambda x: PHASE_ORDER.get(x, 0)), "sponsors": sorted(g["sponsors"]), "settings": sorted(g["settings"]), "statusCounts": dict(statuses), "trialIds": unique_trials})
+        result.append({"id": g["id"], "name": g["name"], "normalized": any(a["name"] == g["name"] for a in ONTOLOGY["assets"]), "aliases": sorted(g["aliases"]), "target": g["target"], "modality": g["modality"], "trialCount": len(unique_trials), "activeTrialCount": g["active"], "recruitingTrialCount": g["recruiting"], "highestPhase": max(g["phases"] or {"NA"}, key=lambda x: PHASE_ORDER.get(x, 0)), "sponsors": sorted(g["sponsors"]), "settings": sorted(g["settings"]), "statusCounts": dict(statuses), "trialIds": unique_trials})
     return sorted(result, key=lambda x: (-x["activeTrialCount"], -x["trialCount"], x["name"].lower()))
 
 
@@ -535,10 +576,18 @@ def snapshot_changes(
             old = previous_map.get(nct)
             if not old:
                 events.append({"type":"NEW_STUDY", "severity":"medium", "title":f"New study registered: {trial['title']}", "detail":f"{trial['sponsor']} added a {', '.join(trial['phases']) or 'phase not reported'} study.", "date":trial.get("firstPosted") or now[:10], "nctId":nct})
-            elif old.get("status") != trial.get("status"):
-                severe = "high" if trial["status"] in {"TERMINATED", "WITHDRAWN", "SUSPENDED"} else "medium"
-                events.append({"type":"STATUS_CHANGE", "severity":severe, "title":f"{nct} moved to {trial['status'].replace('_', ' ').title()}", "detail":f"Registry status changed from {old.get('status', 'unknown').replace('_', ' ').title()} for {trial['title']}.", "date":trial.get("lastUpdated") or now[:10], "nctId":nct})
-    if not events:
+            else:
+                fields = ("status", "primaryCompletionDate", "hasResults")
+                changes = [{"field": field, "before": old.get(field), "after": trial.get(field)} for field in fields if old.get(field) != trial.get(field)]
+                if changes:
+                    kind = "STATUS_CHANGE" if old.get("status") != trial.get("status") else "RESULTS_POSTED" if trial.get("hasResults") and not old.get("hasResults") else "DATE_CHANGE" if old.get("primaryCompletionDate") != trial.get("primaryCompletionDate") else "RECENT_UPDATE"
+                    severe = "high" if trial["status"] in {"TERMINATED", "WITHDRAWN", "SUSPENDED"} else "medium"
+                    labels = {"status": "Status", "primaryCompletionDate": "Primary completion", "hasResults": "Results posted"}
+                    detail = "; ".join(f"{labels[item['field']]}: {item['before'] if item['before'] is not None else 'not reported'} → {item['after'] if item['after'] is not None else 'not reported'}" for item in changes)
+                    events.append({"type": kind, "severity": severe, "title": f"Study updated: {trial['title']}", "detail": detail, "changes": changes, "date": trial.get("lastUpdated") or now[:10], "nctId": nct})
+                elif old.get("lastUpdated") != trial.get("lastUpdated"):
+                    events.append({"type": "RECENT_UPDATE", "severity": "low", "title": f"Registry update: {trial['title']}", "detail": "The registry posted a record revision. No status, primary-completion date or results-posting change was detected in the tracked fields.", "date": trial.get("lastUpdated") or now[:10], "nctId": nct})
+    if not previous:
         dated = sorted([t for t in trials if t.get("lastUpdated")], key=lambda x: x["lastUpdated"], reverse=True)
         for trial in dated[:16]:
             severity = "high" if trial["status"] in {"TERMINATED", "SUSPENDED", "WITHDRAWN"} or "PHASE3" in trial["phases"] else "medium" if trial["status"] == "RECRUITING" else "low"
@@ -551,7 +600,7 @@ def snapshot_changes(
     # Retain accepted events so a quiet refresh does not erase the recent-change
     # history. Prefer explicit status/new-study events over generic record
     # updates for the same study and date.
-    type_priority = {"RECENT_UPDATE": 0, "NEW_STUDY": 1, "STATUS_CHANGE": 2}
+    type_priority = {"RECENT_UPDATE": 0, "NEW_STUDY": 1, "DATE_CHANGE": 2, "RESULTS_POSTED": 3, "STATUS_CHANGE": 4}
     merged = {}
     for event in [*(previous_events or []), *events]:
         identity = (event.get("nctId") or event["id"], event["date"])
@@ -579,7 +628,7 @@ def build_summary(trials: list[dict], assets: list[dict], now: str, version: str
     phase_labels = {"PHASE1":"Phase 1", "PHASE2":"Phase 2", "PHASE3":"Phase 3", "PHASE4":"Phase 4", "EARLY_PHASE1":"Early Phase 1", "NA":"Not applicable"}
     counts_by_phase = [{"name": phase_labels.get(p, p), "value": phase_counts[p]} for p in ["EARLY_PHASE1", "PHASE1", "PHASE2", "PHASE3", "PHASE4", "NA"] if phase_counts[p]]
     today = now[:10]
-    upcoming = sorted([{"nctId":t["nctId"], "title":t["title"], "date":t["primaryCompletionDate"], "phase":max(t["phases"], key=lambda x: PHASE_ORDER.get(x,0)), "sponsor":t["sponsor"]} for t in active if t.get("primaryCompletionDate") and t["primaryCompletionDate"] >= today], key=lambda x:x["date"])[:20]
+    upcoming = sorted([{"nctId":t["nctId"], "title":t["title"], "date":t["primaryCompletionDate"], "phase":max(t["phases"] or ["NA"], key=lambda x: PHASE_ORDER.get(x,0)), "sponsor":t["sponsor"]} for t in active if date_in_window(t.get("primaryCompletionDate"), date.fromisoformat(today), add_months(date.fromisoformat(today), 18))], key=lambda x:x["date"])[:20]
     target_counts.pop("Unclassified", None); modality_counts.pop("Unclassified", None)
     return {"generatedAt":now, "sourceRetrievedAt":now, "datasetVersion":version, "trialCount":len(trials), "activeTrialCount":len(active), "recruitingTrialCount":sum(t["studyType"] == "INTERVENTIONAL" and t["status"] == "RECRUITING" for t in trials), "phase23ActiveCount":sum(bool({"PHASE2","PHASE3"} & set(t["phases"])) for t in active), "assetCount":len(assets), "sponsorCount":len({t["sponsor"] for t in trials}), "resultsTrialCount":sum(t["hasResults"] for t in trials), "countsByPhase":counts_by_phase, "countsByStatus":ranked(status_counts), "countsByTarget":ranked(target_counts), "countsByModality":ranked(modality_counts), "topSponsors":ranked(sponsors), "upcomingMilestones":upcoming, "methodology":{"query":QUERY, "scope":"All returned registry records; headline metrics use interventional studies with recruiting, active-not-recruiting, not-yet-recruiting or enrolling-by-invitation status.", "source":"https://clinicaltrials.gov/data-api/api"}}
 
@@ -593,12 +642,19 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     previous = json.loads(PREVIOUS.read_text()) if PREVIOUS.exists() else None
     previous_events = json.loads(PREVIOUS_CHANGES.read_text()) if PREVIOUS_CHANGES.exists() else None
+    source_path = OUT / "sources.json"
+    previous_sources = {source["id"]: source for source in json.loads(source_path.read_text()).get("sources", [])} if source_path.exists() else {}
+    source_states = []
+    def record_sources(ids: list[tuple[str, str]], success: bool, last_success: str | None, message: str | None = None) -> None:
+        for source_id, name in ids:
+            source_states.append({"id": source_id, "name": name, "status": "current" if success else "fallback", "attemptedAt": now, "lastSuccessAt": now if success else previous_sources.get(source_id, {}).get("lastSuccessAt") or last_success, **({"message": message} if message else {})})
     raw = fetch_studies()
     trials = sorted((normalize(x) for x in raw), key=lambda x: (x.get("lastUpdated") or "", x["nctId"]), reverse=True)
     if len(trials) < 1000 or any(not t.get("nctId") for t in trials):
         raise RuntimeError(f"Validation failed before write: {len(trials)} records")
     version = hashlib.sha256(json.dumps(trials, sort_keys=True).encode()).hexdigest()[:12]
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    record_sources([("clinicaltrials", "ClinicalTrials.gov")], True, None)
     assets = make_assets(trials)
     changes = snapshot_changes(trials, previous, now, previous_events)
     summary = build_summary(trials, assets, now, version)
@@ -608,28 +664,48 @@ def main() -> None:
         fda_events = fetch_fda_events()
         oldest_live = min(x["date"] for x in fda_events)
         regulatory = fda_events + [x for x in REGULATORY if x["date"] < oldest_live]
+        record_sources([("fda", "FDA approval notifications")], True, None)
     except Exception as exc:
-        print(f"FDA refresh warning; retaining curated fallback: {exc}", file=sys.stderr)
-        regulatory = sorted(REGULATORY, key=lambda x: x["date"], reverse=True)
+        print(f"FDA refresh warning; retaining previous records: {exc}", file=sys.stderr)
+        regulatory_path = OUT / "regulatory.json"
+        regulatory = json.loads(regulatory_path.read_text()) if regulatory_path.exists() else sorted(REGULATORY, key=lambda x: x["date"], reverse=True)
+        record_sources([("fda", "FDA approval notifications")], False, None, "Latest retrieval failed; retained earlier records. Coverage may be incomplete.")
     write_json(OUT / "regulatory.json", regulatory)
+    evidence = json.loads((OUT / "evidence.json").read_text()) if (OUT / "evidence.json").exists() else {}
     try:
-        evidence = fetch_pubmed_evidence()
+        evidence.update(fetch_pubmed_evidence())
         write_json(OUT / "evidence.json", evidence)
+        record_sources([("pubmed", "PubMed")], True, None)
     except Exception as exc:
         if not (OUT / "evidence.json").exists():
             raise
         print(f"PubMed refresh warning; retaining accepted evidence snapshot: {exc}", file=sys.stderr)
+        retained = json.loads((OUT / "evidence.json").read_text())
+        record_sources([("pubmed", "PubMed")], False, retained.get("generatedAt"), "Literature retrieval failed; retained earlier literature records.")
+    try:
+        evidence.update(fetch_nih_grants())
+        write_json(OUT / "evidence.json", evidence)
+        record_sources([("nih", "NIH RePORTER")], True, None)
+    except Exception as exc:
+        if not evidence.get("grants"):
+            raise
+        print(f"NIH refresh warning; retaining accepted funding snapshot: {exc}", file=sys.stderr)
+        record_sources([("nih", "NIH RePORTER")], False, evidence.get("grantsGeneratedAt") or evidence.get("generatedAt"), "Funding retrieval failed; retained earlier funding records.")
     try:
         market_context = fetch_market_context()
         write_json(OUT / "market-context.json", market_context)
+        record_sources([("dailymed", "DailyMed"), ("ema", "European Medicines Agency"), ("shortages", "FDA shortage records")], True, None)
     except Exception as exc:
         if not (OUT / "market-context.json").exists():
             raise
         print(f"Market-context refresh warning; retaining accepted snapshot: {exc}", file=sys.stderr)
+        retained = json.loads((OUT / "market-context.json").read_text())
+        record_sources([("dailymed", "DailyMed"), ("ema", "European Medicines Agency"), ("shortages", "FDA shortage records")], False, retained.get("generatedAt"), "Market-source retrieval failed; retained earlier label, European medicine and shortage records.")
     evidence = json.loads((OUT / "evidence.json").read_text())
     market_context = json.loads((OUT / "market-context.json").read_text())
     strategic = build_strategic_intelligence(trials, assets, summary, evidence, now)
     write_json(OUT / "strategic.json", strategic)
+    write_json(source_path, {"generatedAt": now, "sources": source_states})
     print(f"Built {len(trials):,} trials, {len(assets):,} assets, version {version}")
 
 

@@ -39,6 +39,8 @@ GitHub Actions refreshes and validates the data each Monday at 07:17 US Eastern 
 
 The frontend is React, TypeScript, Tailwind CSS, and Vite. The data pipeline uses Python's standard library.
 
+Changes go through `feature/cleanup-and-upgrades` → `develop` → `main`, using pull requests. `main` is the production branch; feature and develop changes are reviewed and tested before promotion.
+
 ## License and attribution
 
 The MIT license covers this project's code and documentation; it does not grant rights to third-party source records or linked material. This is an independent project, not affiliated with or endorsed by Johnson & Johnson or the listed data providers. See [NCBI's disclaimer and copyright guidance](https://www.ncbi.nlm.nih.gov/home/about/policies/) for PubMed content.

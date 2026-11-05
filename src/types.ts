@@ -21,6 +21,7 @@ export type Trial = {
   studyType: string;
   hasResults: boolean;
   locations: { city?: string; state?: string; country?: string }[];
+  countries: string[];
   briefSummary?: string;
   firstPosted?: string;
   lastUpdated?: string;
@@ -31,6 +32,7 @@ export type Trial = {
 export type Asset = {
   id: string;
   name: string;
+  normalized?: boolean;
   aliases: string[];
   target: string;
   modality: string;
@@ -80,6 +82,11 @@ export type ChangeEvent = {
   nctId?: string;
   sourceUrl: string;
   observedAt: string;
+  changes?: {
+    field: string;
+    before: string | boolean | null;
+    after: string | boolean | null;
+  }[];
 };
 
 export type RegulatoryEvent = {
@@ -106,6 +113,7 @@ export type Publication = {
 };
 
 export type Evidence = {
+  currentFiscalYear: number;
   generatedAt: string;
   query: string;
   totalCount: number;
@@ -177,9 +185,8 @@ export type StrategicIntelligence = {
     phase3Trials: number;
     activeAssets: number;
     sponsors: number;
-    recentPublications: number;
+    recentPublications: number | null;
     recentGrants: number;
-    crowdingScore: number;
   }[];
   modalityLandscape: {
     modality: string;
@@ -223,4 +230,16 @@ export type StrategicIntelligence = {
     tone: string;
   }[];
   methodology: string;
+};
+
+export type SourceManifest = {
+  generatedAt: string;
+  sources: {
+    id: string;
+    name: string;
+    status: "current" | "fallback";
+    attemptedAt: string;
+    lastSuccessAt: string | null;
+    message?: string;
+  }[];
 };

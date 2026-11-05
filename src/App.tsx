@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AppDataProvider } from "./context/AppDataContext";
+import { AppDataProvider, type AppData } from "./context/AppDataContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { EvidencePage } from "./pages/EvidencePage";
 import { MethodologyPage } from "./pages/MethodologyPage";
@@ -8,21 +8,26 @@ import { PipelinePage } from "./pages/PipelinePage";
 import { RegulatoryPage } from "./pages/RegulatoryPage";
 import { TrialsPage } from "./pages/TrialsPage";
 
-export function App() {
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<OverviewPage />} />
+        <Route path="pipeline" element={<PipelinePage />} />
+        <Route path="trials" element={<TrialsPage />} />
+        <Route path="evidence" element={<EvidencePage />} />
+        <Route path="regulatory" element={<RegulatoryPage />} />
+        <Route path="methodology" element={<MethodologyPage />} />
+        <Route path="*" element={<Navigate replace to="/" />} />
+      </Route>
+    </Routes>
+  );
+}
+export function App({ initialData }: { initialData?: Partial<AppData> }) {
   return (
     <BrowserRouter>
-      <AppDataProvider>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<OverviewPage />} />
-            <Route path="pipeline" element={<PipelinePage />} />
-            <Route path="trials" element={<TrialsPage />} />
-            <Route path="evidence" element={<EvidencePage />} />
-            <Route path="regulatory" element={<RegulatoryPage />} />
-            <Route path="methodology" element={<MethodologyPage />} />
-            <Route path="*" element={<Navigate replace to="/" />} />
-          </Route>
-        </Routes>
+      <AppDataProvider initialData={initialData}>
+        <AppRoutes />
       </AppDataProvider>
     </BrowserRouter>
   );
