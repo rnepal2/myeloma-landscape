@@ -1,9 +1,89 @@
 import unittest
+from scripts.refresh_data import fetch_nih_grants
+import io
 from datetime import date
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
-from scripts.refresh_data import add_months, eutils_url, snapshot_changes
+from scripts.refresh_data import add_months, eutils_url, snapshot_changes, fiscal_year, date_in_window, classify_intervention, normalize, make_assets, build_summary, build_strategic_intelligence, fetch_json
+
+
+def sample_trial(nct="NCT00000001", **overrides):
+    return {"nctId": nct, "title": "Example study", "studyType": "INTERVENTIONAL", "status": "RECRUITING", "phases": ["PHASE2"], "sponsor": "Example sponsor", "sponsorClass": "INDUSTRY", "interventions": [classify_intervention("Dexamethasone", "DRUG")], "setting": "Not classified", "countries": ["United States"], "locations": [{"country": "United States"}], "hasResults": False, "primaryCompletionDate": "2027-01-10", "firstPosted": "2026-01-01", "lastUpdated": "2026-11-02", **overrides}
+
+
+class CorrectnessRegressionTest(unittest.TestCase):
+    def test_retries_http_success_with_api_error(self):
+        responses = [io.StringIO('{"error":"temporary upstream error"}'), io.StringIO('{"esearchresult":{"count":"20"}}')]
+        with patch("urllib.request.urlopen", side_effect=responses) as request, patch("time.sleep"):
+            result = fetch_json("https://example.org/api", attempts=2)
+        self.assertEqual(2, request.call_count)
+        self.assertEqual("20", result["esearchresult"]["count"])
+
+    def test_fallback_funding_keeps_recorded_fiscal_year(self):
+        trials = [sample_trial()]
+        assets = make_assets(trials)
+        summary = build_summary(trials, assets, "2026-11-02T00:00:00Z", "test")
+        evidence = {"targetMomentum": [], "grants": [{"fiscalYear": 2026, "awardAmount": 500000, "title": "Example myeloma project"}], "targetCountWindow": "2024–2026", "grantAwardsByYear": [{"name": "2026", "value": 500000}]}
+        result = build_strategic_intelligence(trials, assets, summary, evidence, "2026-11-02T00:00:00Z")
+        self.assertIsNone(result["targetLandscape"][0]["recentPublications"])
+        funding = next(x for x in result["landscapeMeasures"] if x["id"] == "nih-funding")
+        self.assertEqual("$500K in FY2026", funding["metric"])
+        self.assertIn("1 FY2026 records", funding["title"])
+
+    def test_distinct_entity_studies(self):
+        trial = sample_trial()
+        trial["interventions"].append(classify_intervention("Dexamethasone 10mg", "DRUG"))
+        asset = make_assets([trial])[0]
+        self.assertEqual(1, asset["activeTrialCount"])
+        self.assertEqual(1, asset["recruitingTrialCount"])
+        self.assertEqual({"RECRUITING": 1}, asset["statusCounts"])
+
+    def test_country_aggregation_precedes_display_limit(self):
+        raw = {"protocolSection": {"identificationModule": {"nctId": "NCT00000001"}, "contactsLocationsModule": {"locations": [{"city": str(n), "country": "United States"} for n in range(12)] + [{"city": "London", "country": "United Kingdom"}]}}}
+        trial = normalize(raw)
+        self.assertEqual(12, len(trial["locations"]))
+        self.assertEqual(["United Kingdom", "United States"], trial["countries"])
+
+    def test_classification_token_collision(self):
+        self.assertEqual("p300/CBP", classify_intervention("CCS1477", "DRUG")["target"])
+        self.assertNotIn("target", classify_intervention("CCS1234", "DRUG"))
+        self.assertEqual("SLAMF7", classify_intervention("Anti-CS1 antibody", "BIOLOGICAL")["target"])
+
+    def test_fiscal_rollover_and_imprecise_dates(self):
+        self.assertEqual(2026, fiscal_year(date(2026, 9, 30)))
+        self.assertEqual(2027, fiscal_year(date(2026, 10, 1)))
+        self.assertTrue(date_in_window("2026-11", date(2026, 11, 20), date(2027, 1, 1)))
+        self.assertFalse(date_in_window("2026-10", date(2026, 11, 1), date(2027, 1, 1)))
+
+    def test_phase3_window_not_limited_by_first_twenty_studies(self):
+        trials = [sample_trial(f"NCT{n:08d}", primaryCompletionDate="2026-11-05") for n in range(21)]
+        trials.append(sample_trial("NCT00000999", phases=["PHASE3"], primaryCompletionDate="2027-01-10"))
+        assets = make_assets(trials)
+        summary = build_summary(trials, assets, "2026-11-02T00:00:00Z", "test")
+        evidence = {"targetMomentum": [], "grants": [], "targetCountWindow": "2024–2026", "currentFiscalYear": 2027}
+        strategic = build_strategic_intelligence(trials, assets, summary, evidence, "2026-11-02T00:00:00Z")
+        self.assertEqual(20, len(summary["upcomingMilestones"]))
+        self.assertEqual(["NCT00000999"], [x["nctId"] for x in strategic["lateStageMilestones"]])
+
+    def test_completion_and_results_changes_preserve_before_after(self):
+        old = sample_trial()
+        current = sample_trial(primaryCompletionDate="2027-02", hasResults=True)
+        event = snapshot_changes([current], [old], "2026-11-02T00:00:00Z")[0]
+        self.assertEqual("RESULTS_POSTED", event["type"])
+        self.assertEqual(2, len(event["changes"]))
+        self.assertEqual("2027-01-10", event["changes"][0]["before"])
+
+
+class NihPaginationTest(unittest.TestCase):
+    def test_fetches_all_funding_pages(self):
+        with patch("scripts.refresh_data.post_json", side_effect=[
+            {"meta": {"total": 2}, "results": [{"appl_id": 1}]},
+            {"results": [{"appl_id": 2}]},
+        ]), patch("scripts.refresh_data.time.sleep"):
+            result = fetch_nih_grants()
+        self.assertEqual(result["grantCount"], 2)
+        self.assertEqual([row["id"] for row in result["grants"]], ["1", "2"])
 
 
 class AddMonthsTest(unittest.TestCase):

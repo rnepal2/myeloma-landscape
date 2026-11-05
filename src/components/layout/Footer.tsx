@@ -24,7 +24,7 @@ export function Footer() {
           </span>
           <div>
             <strong className="block text-[15px] text-[#e3efed]">
-              Myeloma Intelligence
+              Myeloma Landscape
             </strong>
             <p className="mt-2 max-w-sm text-[13px] leading-6">
               Public-source records for multiple myeloma trials, therapies,

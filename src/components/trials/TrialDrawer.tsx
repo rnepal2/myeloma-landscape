@@ -1,5 +1,5 @@
 import { ExternalLink, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Badge } from "../ui/Badge";
 import { prettyEnum, shortDate } from "../../lib/format";
 import type { Trial } from "../../types";
@@ -11,18 +11,40 @@ export function TrialDrawer({
   trial: Trial | null;
   onClose: () => void;
 }) {
+  const panel = useRef<HTMLElement>(null);
+  const closeAction = useRef(onClose);
+  closeAction.current = onClose;
   useEffect(() => {
     if (!trial) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    panel.current?.querySelector<HTMLElement>("button")?.focus();
     const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeAction.current();
+      if (event.key === "Tab") {
+        const controls = panel.current?.querySelectorAll<HTMLElement>(
+          'button, a[href], input, select, [tabindex="0"]',
+        );
+        if (!controls?.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
     addEventListener("keydown", close);
     document.body.style.overflow = "hidden";
     return () => {
       removeEventListener("keydown", close);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
     };
-  }, [trial, onClose]);
+  }, [trial?.nctId]);
 
   if (!trial) return null;
   return (
@@ -32,9 +54,12 @@ export function TrialDrawer({
       role="presentation"
     >
       <aside
+        ref={panel}
         className="relative h-full w-full max-w-[590px] overflow-y-auto bg-white p-6 shadow-2xl sm:p-10"
         onMouseDown={(event) => event.stopPropagation()}
         aria-label="Trial detail"
+        role="dialog"
+        aria-modal="true"
       >
         <button
           className="absolute right-5 top-5 grid size-9 place-items-center rounded-full border border-[#dbe5e1] bg-white text-[#0b292f]"
@@ -86,6 +111,11 @@ export function TrialDrawer({
             </div>
           ))}
         </dl>
+        <p className="text-xs leading-5 text-[#65797b]">
+          Primary completion is a registry date for collecting the primary
+          outcome data. It is not a promised results publication date. Dates and
+          enrollment may be revised by the record owner.
+        </p>
         <h3 className="mb-3 mt-8 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#0b292f]">
           Interventions
         </h3>
