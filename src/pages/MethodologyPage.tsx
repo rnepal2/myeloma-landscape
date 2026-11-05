@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { PageIntro } from "../components/ui/PageIntro";
 import { useAppData } from "../context/AppDataContext";
-import { SourceStatus } from "../components/ui/SourceStatus";
 
 const sources = [
   {
@@ -76,7 +75,7 @@ export function MethodologyPage() {
     [
       ShieldCheck,
       "Refresh checks",
-      "Each weekly run checks identifiers, references and key calculations. If an optional source cannot be retrieved, its previous records are retained and marked below. A failed validation prevents publication.",
+      "Each weekly run retrieves every source and checks identifiers, references and key calculations. Publication requires a complete successful refresh. If retrieval or validation fails, the live snapshot is kept and the workflow reports the failure.",
     ],
   ] as const;
 
@@ -86,8 +85,6 @@ export function MethodologyPage() {
         title="Sources, definitions and limitations"
         copy="What the site includes, how records are grouped, and where coverage is limited."
       />
-      <h2 className="mb-2 text-lg font-semibold">Source retrieval status</h2>
-      <SourceStatus />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {principles.map(([Icon, title, copy]) => (
@@ -209,11 +206,12 @@ export function MethodologyPage() {
             medical advice, clinical decision support, regulatory advice,
             market-share reporting, investment advice, or a validated commercial
             intelligence product. Source records may be incomplete, delayed, or
-            revised by their publishers. The retrieval dates above apply to each
-            source separately. Therapy entities may include unresolved registry
-            names and regimen strings; they are not a count of distinct
-            development programs. A highest study phase does not establish a
-            medicine's approval status.
+            revised by their publishers. The header date is the oldest
+            successful source retrieval in the published snapshot. New snapshots
+            are published only after all sources refresh. Therapy entities may
+            include unresolved registry names and regimen strings; they are not
+            a count of distinct development programs. A highest study phase does
+            not establish a medicine's approval status.
           </p>
         </div>
       </div>

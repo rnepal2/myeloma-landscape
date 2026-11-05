@@ -111,7 +111,7 @@ export function TrialsPage() {
     assetId,
     assetIds,
   ]);
-  const pageSize = 15;
+  const pageSize = 10;
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
   useEffect(
     () => setPage(1),

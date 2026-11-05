@@ -5,7 +5,7 @@ import { Badge } from "../components/ui/Badge";
 import { MetricCard } from "../components/ui/MetricCard";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { SourceNote } from "../components/ui/SourceNote";
-import { SourceStatus } from "../components/ui/SourceStatus";
+import { ScrollList } from "../components/ui/ScrollList";
 import { useAppData } from "../context/AppDataContext";
 import { prettyEnum, shortDate, snapshotDate } from "../lib/format";
 export function OverviewPage() {
@@ -55,88 +55,100 @@ export function OverviewPage() {
           compact
         />
       </div>
-      <SourceStatus ids={["clinicaltrials"]} />
       <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <div>
           <SectionHeading
             title="Recent registry changes"
             copy="Changes observed between accepted snapshots. Registry dates and observation dates can differ."
           />
-          {changes.slice(0, 6).map((change) => (
-            <article key={change.id} className="border-t border-white/10 py-5">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge tone="blue">{prettyEnum(change.type)}</Badge>
-                <span className="text-[11px] text-[#9ba3aa]">
-                  Registry: {shortDate(change.date)} · Observed:{" "}
-                  {snapshotDate(change.observedAt)}
-                </span>
-              </div>
-              <h3 className="mt-3 text-sm font-bold leading-6">
-                {change.title}
-              </h3>
-              <p className="mt-2 text-xs leading-6 text-[#9ba3aa]">
-                {change.changes?.length
-                  ? change.changes
-                      .map((item) => {
-                        const label =
-                          item.field === "status"
-                            ? "Status"
-                            : item.field === "hasResults"
-                              ? "Results posted"
-                              : "Primary completion";
-                        const format = (value: string | boolean | null) =>
-                          value === null
-                            ? "Not reported"
-                            : typeof value === "boolean"
-                              ? value
-                                ? "Yes"
-                                : "No"
-                              : item.field === "status"
-                                ? prettyEnum(value)
-                                : shortDate(value);
-                        return `${label}: ${format(item.before)} → ${format(item.after)}`;
-                      })
-                      .join("; ")
-                  : change.detail}
-              </p>
-              <div className="mt-3 flex gap-4 text-xs">
-                <Link
-                  className="text-[#91a0ff]"
-                  to={`/trials?status=ALL&study=${change.nctId}`}
-                >
-                  Study details
-                </Link>
-                <a
-                  href={change.sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[#91a0ff]"
-                >
-                  Source record <ExternalLink size={12} />
-                </a>
-              </div>
-            </article>
-          ))}
+          <ScrollList label="Recent registry changes" count={changes.length}>
+            {changes.map((change) => (
+              <article
+                key={change.id}
+                className="border-t border-white/10 py-5"
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge tone="blue">{prettyEnum(change.type)}</Badge>
+                  <span className="text-[11px] text-[#9ba3aa]">
+                    Registry: {shortDate(change.date)} · Observed:{" "}
+                    {snapshotDate(change.observedAt)}
+                  </span>
+                </div>
+                <h3 className="mt-3 text-sm font-bold leading-6">
+                  {change.title}
+                </h3>
+                <p className="mt-2 text-xs leading-6 text-[#9ba3aa]">
+                  {change.changes?.length
+                    ? change.changes
+                        .map((item) => {
+                          const label =
+                            item.field === "status"
+                              ? "Status"
+                              : item.field === "hasResults"
+                                ? "Results posted"
+                                : "Primary completion";
+                          const format = (value: string | boolean | null) =>
+                            value === null
+                              ? "Not reported"
+                              : typeof value === "boolean"
+                                ? value
+                                  ? "Yes"
+                                  : "No"
+                                : item.field === "status"
+                                  ? prettyEnum(value)
+                                  : shortDate(value);
+                          return `${label}: ${format(item.before)} → ${format(item.after)}`;
+                        })
+                        .join("; ")
+                    : change.detail}
+                </p>
+                <div className="mt-3 flex gap-4 text-xs">
+                  <Link
+                    className="text-[#91a0ff]"
+                    to={`/trials?status=ALL&study=${change.nctId}`}
+                  >
+                    Study details
+                  </Link>
+                  <a
+                    href={change.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[#91a0ff]"
+                  >
+                    Source record <ExternalLink size={12} />
+                  </a>
+                </div>
+              </article>
+            ))}
+          </ScrollList>
         </div>
         <aside>
           <SectionHeading
             title="Upcoming Phase 3 dates"
             copy="Registered primary-completion dates, which may change. They are not expected results-release dates."
           />
-          {strategic.lateStageMilestones.slice(0, 5).map((item) => (
-            <article key={item.nctId} className="border-t border-white/10 py-5">
-              <p className="text-xs font-bold text-[#91a0ff]">
-                {shortDate(item.date)}
-              </p>
-              <Link
-                to={`/trials?status=ALL&study=${item.nctId}`}
-                className="mt-2 block text-sm font-semibold leading-6 text-[#e3e7ef] no-underline"
+          <ScrollList
+            label="Upcoming Phase 3 dates"
+            count={strategic.lateStageMilestones.length}
+          >
+            {strategic.lateStageMilestones.map((item) => (
+              <article
+                key={item.nctId}
+                className="border-t border-white/10 py-5"
               >
-                {item.title}
-              </Link>
-              <p className="mt-2 text-xs text-[#9ba3aa]">{item.sponsor}</p>
-            </article>
-          ))}
+                <p className="text-xs font-bold text-[#91a0ff]">
+                  {shortDate(item.date)}
+                </p>
+                <Link
+                  to={`/trials?status=ALL&study=${item.nctId}`}
+                  className="mt-2 block text-sm font-semibold leading-6 text-[#e3e7ef] no-underline"
+                >
+                  {item.title}
+                </Link>
+                <p className="mt-2 text-xs text-[#9ba3aa]">{item.sponsor}</p>
+              </article>
+            ))}
+          </ScrollList>
           {!strategic.lateStageMilestones.length && (
             <p className="text-sm text-[#9ba3aa]">
               No matching dates are reported in this snapshot.
@@ -151,7 +163,6 @@ export function OverviewPage() {
         </aside>
       </div>
       <div className="mt-14">
-        <SourceStatus ids={["pubmed", "nih"]} />
         <SectionHeading
           title="Studies by target family"
           copy="Distinct active studies containing a classified intervention. Combination studies can appear in multiple rows; background and comparator therapies are included."
@@ -165,7 +176,6 @@ export function OverviewPage() {
       </div>
       <div className="mt-12 rounded-lg border border-white/10 p-6">
         <h2 className="text-lg font-semibold">FDA approval notifications</h2>
-        <SourceStatus ids={["fda"]} />
         {regulatory[0] && (
           <>
             <p className="mt-4 text-xs text-[#9ba3aa]">

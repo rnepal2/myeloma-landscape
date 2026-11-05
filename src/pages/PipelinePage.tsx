@@ -62,6 +62,75 @@ export function PipelinePage() {
         title="Find studies by therapy or target"
         copy="Explore therapies and registered intervention names linked to active myeloma studies. Counts include all study arms, including background treatment and comparators."
       />
+      <section className="mb-10">
+        <SectionHeading
+          title="Active study counts"
+          copy="The phase chart and target counts describe active interventional studies. A study may report multiple phases or include several targets."
+        />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <article className="rounded-lg border border-[#dbe5e1] bg-white p-6">
+            <h2 className="text-[15px] font-bold text-[#0b292f]">
+              Studies by phase
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-[#65797b]">
+              Phase 1/2 studies appear in both phase counts.
+            </p>
+            <div className="mt-5 h-72">
+              <ResponsiveContainer>
+                <BarChart data={summary.countsByPhase}>
+                  <CartesianGrid
+                    stroke="#2a3036"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+                  <XAxis
+                    axisLine={false}
+                    dataKey="name"
+                    tick={{ fill: "#9ba3aa", fontSize: 10 }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tick={{ fill: "#9ba3aa", fontSize: 11 }}
+                    tickLine={false}
+                  />
+                  <Tooltip cursor={{ fill: "#191e23" }} />
+                  <Bar dataKey="value" fill="#788aff" radius={[5, 5, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+          <article className="rounded-lg border border-[#dbe5e1] bg-white p-6">
+            <h2 className="text-[15px] font-bold text-[#0b292f]">
+              Studies by target family
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-[#65797b]">
+              Each study counts once per target family. Families overlap and do
+              not form shares of a total.
+            </p>
+            <div className="mt-5 space-y-3">
+              {targetChart.map((row) => (
+                <Link
+                  key={row.target}
+                  to={`/trials?target=${encodeURIComponent(row.target)}&status=ACTIVE`}
+                  className="grid grid-cols-[130px_1fr_34px] items-center gap-3 text-[11px] no-underline hover:text-[#91a0ff]"
+                >
+                  <span>{row.target}</span>
+                  <span className="h-2 overflow-hidden rounded bg-white/5">
+                    <span
+                      className="block h-full rounded bg-[#788aff]"
+                      style={{
+                        width: `${(100 * row.activeTrials) / Math.max(1, targetChart[0]?.activeTrials ?? 1)}%`,
+                      }}
+                    />
+                  </span>
+                  <strong className="text-right">{row.activeTrials}</strong>
+                </Link>
+              ))}
+            </div>
+          </article>
+        </div>
+      </section>
       <div className="grid gap-2.5 sm:grid-cols-[1fr_260px]">
         <SearchBox
           value={query}
@@ -173,75 +242,6 @@ export function PipelinePage() {
         onPage={setPage}
         label="interventions"
       />
-      <section className="mt-16">
-        <SectionHeading
-          title="Active study counts"
-          copy="The phase chart and target counts describe active interventional studies. A study may report multiple phases or include several targets."
-        />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <article className="rounded-lg border border-[#dbe5e1] bg-white p-6">
-            <h2 className="text-[15px] font-bold text-[#0b292f]">
-              Studies by phase
-            </h2>
-            <p className="mt-2 text-xs leading-5 text-[#65797b]">
-              Phase 1/2 studies appear in both phase counts.
-            </p>
-            <div className="mt-5 h-72">
-              <ResponsiveContainer>
-                <BarChart data={summary.countsByPhase}>
-                  <CartesianGrid
-                    stroke="#2a3036"
-                    strokeDasharray="3 3"
-                    vertical={false}
-                  />
-                  <XAxis
-                    axisLine={false}
-                    dataKey="name"
-                    tick={{ fill: "#9ba3aa", fontSize: 10 }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tick={{ fill: "#9ba3aa", fontSize: 11 }}
-                    tickLine={false}
-                  />
-                  <Tooltip cursor={{ fill: "#191e23" }} />
-                  <Bar dataKey="value" fill="#788aff" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </article>
-          <article className="rounded-lg border border-[#dbe5e1] bg-white p-6">
-            <h2 className="text-[15px] font-bold text-[#0b292f]">
-              Studies by target family
-            </h2>
-            <p className="mt-2 text-xs leading-5 text-[#65797b]">
-              Each study counts once per target family. Families overlap and do
-              not form shares of a total.
-            </p>
-            <div className="mt-5 space-y-3">
-              {targetChart.map((row) => (
-                <Link
-                  key={row.target}
-                  to={`/trials?target=${encodeURIComponent(row.target)}&status=ACTIVE`}
-                  className="grid grid-cols-[130px_1fr_34px] items-center gap-3 text-[11px] no-underline hover:text-[#91a0ff]"
-                >
-                  <span>{row.target}</span>
-                  <span className="h-2 overflow-hidden rounded bg-white/5">
-                    <span
-                      className="block h-full rounded bg-[#788aff]"
-                      style={{
-                        width: `${(100 * row.activeTrials) / Math.max(1, targetChart[0]?.activeTrials ?? 1)}%`,
-                      }}
-                    />
-                  </span>
-                  <strong className="text-right">{row.activeTrials}</strong>
-                </Link>
-              ))}
-            </div>
-          </article>
-        </div>
-      </section>
       <section className="mt-16">
         <SectionHeading
           title="Lead sponsors"
