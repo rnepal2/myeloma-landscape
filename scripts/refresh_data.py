@@ -253,6 +253,17 @@ def fetch_pubmed_evidence() -> dict:
         target_payload = fetch_json(eutils_url("esearch.fcgi", {"db": "pubmed", "term": target_query, "retmode": "json", "retmax": "0"}))
         target_counts.append({"name": target, "value": int(target_payload.get("esearchresult", {}).get("count", 0))})
     target_counts.sort(key=lambda item: (-item["value"], item["name"]))
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "query": query, "totalCount": int(search_result.get("count", 0)), "sampleSize": len(publications),
+        "countsByYear": counts_by_year, "targetMomentum": target_counts, "targetCountWindow": f"{window_start}–{current_year}",
+        "topJournals": [{"name": k, "value": v} for k, v in journal_counter.most_common(8)],
+        "publications": publications,
+        "methodology": f"The literature explorer searches the 200 retrieved PubMed citations with multiple myeloma or plasma cell myeloma in the title. Target queries use reviewed title/abstract terms during {window_start}–{current_year} and can overlap. NIH records require multiple myeloma in the project title; the displayed fiscal-year range applies to the retrieved funding snapshot."
+    }
+
+
+def fetch_nih_grants() -> dict:
     current_fy = fiscal_year(datetime.now(timezone.utc).date())
     grant_payload = {
         "criteria": {"advanced_text_search": {"operator": "and", "search_field": "projecttitle", "search_text": '"multiple myeloma"'}, "fiscal_years": [current_fy - 2, current_fy - 1, current_fy]},
@@ -284,14 +295,9 @@ def fetch_pubmed_evidence() -> dict:
     for grant in grants:
         grant_years[str(grant["fiscalYear"])] += grant["awardAmount"]
     return {
-        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "query": query, "totalCount": int(search_result.get("count", 0)), "sampleSize": len(publications),
-        "countsByYear": counts_by_year, "targetMomentum": target_counts, "targetCountWindow": f"{window_start}–{current_year}",
-        "topJournals": [{"name": k, "value": v} for k, v in journal_counter.most_common(8)],
-        "publications": publications,
+        "grantsGeneratedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "grantCount": total_grants, "grants": grants, "currentFiscalYear": current_fy,
         "grantAwardsByYear": [{"name": str(y), "value": grant_years[str(y)]} for y in range(current_fy - 2, current_fy + 1)],
-        "methodology": f"The literature explorer contains the 200 most recent PubMed records with multiple myeloma or plasma cell myeloma in the citation title. Target-level counts use separate PubMed queries across titles and abstracts for reviewed target and therapy terms during {window_start}–{current_year}; target counts can overlap and are not measures of evidence quality or clinical benefit. NIH RePORTER records require multiple myeloma in the project title and cover the current and two prior fiscal years."
     }
 
 
@@ -665,16 +671,26 @@ def main() -> None:
         regulatory = json.loads(regulatory_path.read_text()) if regulatory_path.exists() else sorted(REGULATORY, key=lambda x: x["date"], reverse=True)
         record_sources([("fda", "FDA approval notifications")], False, None, "Latest retrieval failed; retained earlier records. Coverage may be incomplete.")
     write_json(OUT / "regulatory.json", regulatory)
+    evidence = json.loads((OUT / "evidence.json").read_text()) if (OUT / "evidence.json").exists() else {}
     try:
-        evidence = fetch_pubmed_evidence()
+        evidence.update(fetch_pubmed_evidence())
         write_json(OUT / "evidence.json", evidence)
-        record_sources([("pubmed", "PubMed"), ("nih", "NIH RePORTER")], True, None)
+        record_sources([("pubmed", "PubMed")], True, None)
     except Exception as exc:
         if not (OUT / "evidence.json").exists():
             raise
         print(f"PubMed refresh warning; retaining accepted evidence snapshot: {exc}", file=sys.stderr)
         retained = json.loads((OUT / "evidence.json").read_text())
-        record_sources([("pubmed", "PubMed"), ("nih", "NIH RePORTER")], False, retained.get("generatedAt"), "Evidence retrieval failed; retained earlier literature and funding records.")
+        record_sources([("pubmed", "PubMed")], False, retained.get("generatedAt"), "Literature retrieval failed; retained earlier literature records.")
+    try:
+        evidence.update(fetch_nih_grants())
+        write_json(OUT / "evidence.json", evidence)
+        record_sources([("nih", "NIH RePORTER")], True, None)
+    except Exception as exc:
+        if not evidence.get("grants"):
+            raise
+        print(f"NIH refresh warning; retaining accepted funding snapshot: {exc}", file=sys.stderr)
+        record_sources([("nih", "NIH RePORTER")], False, evidence.get("grantsGeneratedAt") or evidence.get("generatedAt"), "Funding retrieval failed; retained earlier funding records.")
     try:
         market_context = fetch_market_context()
         write_json(OUT / "market-context.json", market_context)

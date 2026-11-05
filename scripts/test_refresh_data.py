@@ -1,4 +1,5 @@
 import unittest
+from scripts.refresh_data import fetch_nih_grants
 import io
 from datetime import date
 from unittest.mock import patch
@@ -72,6 +73,17 @@ class CorrectnessRegressionTest(unittest.TestCase):
         self.assertEqual("RESULTS_POSTED", event["type"])
         self.assertEqual(2, len(event["changes"]))
         self.assertEqual("2027-01-10", event["changes"][0]["before"])
+
+
+class NihPaginationTest(unittest.TestCase):
+    def test_fetches_all_funding_pages(self):
+        with patch("scripts.refresh_data.post_json", side_effect=[
+            {"meta": {"total": 2}, "results": [{"appl_id": 1}]},
+            {"results": [{"appl_id": 2}]},
+        ]), patch("scripts.refresh_data.time.sleep"):
+            result = fetch_nih_grants()
+        self.assertEqual(result["grantCount"], 2)
+        self.assertEqual([row["id"] for row in result["grants"]], ["1", "2"])
 
 
 class AddMonthsTest(unittest.TestCase):

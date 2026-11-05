@@ -29,7 +29,8 @@ const pages: Record<string, [string, string]> = {
 export function PageMetadata() {
   const { pathname } = useLocation();
   useEffect(() => {
-    const [title, description] = pages[pathname] ?? pages["/"];
+    const path = pathname.replace(/\/$/, "") || "/";
+    const [title, description] = pages[path] ?? pages["/"];
     document.title = title;
     document
       .querySelector('meta[name="description"]')
@@ -42,7 +43,7 @@ export function PageMetadata() {
       canonical.rel = "canonical";
       document.head.append(canonical);
     }
-    canonical.href = `https://myeloma-landscape.pages.dev${pathname === "/" ? "/" : pathname}`;
+    canonical.href = `https://myeloma-landscape.pages.dev${path}`;
   }, [pathname]);
   return null;
 }

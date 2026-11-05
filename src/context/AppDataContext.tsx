@@ -42,51 +42,77 @@ const filenames: Record<keyof AppData, string> = {
   sources: "sources",
 };
 const requests = new Map<string, Promise<unknown>>();
-export function AppDataProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<Partial<AppData>>({});
-  const [error, setError] = useState("");
-  const { pathname } = useLocation();
-  const required: (keyof AppData)[] = [
+export function routeKeys(pathname: string): (keyof AppData)[] {
+  pathname = pathname.replace(/\/$/, "") || "/";
+  const keys: (keyof AppData)[] = [
     "summary",
     "strategic",
     "changes",
     "sources",
   ];
   if (["/pipeline", "/trials"].includes(pathname))
-    required.push("trials", "assets");
-  if (["/evidence", "/methodology"].includes(pathname))
-    required.push("evidence");
-  if (["/regulatory", "/methodology"].includes(pathname))
-    required.push("market");
-  if (["/regulatory", "/"].includes(pathname)) required.push("regulatory");
+    keys.push("trials", "assets");
+  if (["/evidence", "/methodology"].includes(pathname)) keys.push("evidence");
+  if (["/regulatory", "/methodology"].includes(pathname)) keys.push("market");
+  if (["/regulatory", "/"].includes(pathname)) keys.push("regulatory");
+  return keys;
+}
+export async function loadRouteData(
+  pathname: string,
+): Promise<Partial<AppData>> {
+  const entries = await Promise.all(
+    routeKeys(pathname).map((key) => {
+      if (!requests.has(key))
+        requests.set(
+          key,
+          fetch(`/data/${filenames[key]}.json`, { cache: "no-cache" })
+            .then((response) => {
+              if (!response.ok)
+                throw new Error(`${filenames[key]}: HTTP ${response.status}`);
+              return response.json();
+            })
+            .catch((reason) => {
+              requests.delete(key);
+              throw reason;
+            }),
+        );
+      return requests.get(key)!.then((value) => [key, value]);
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+export function SnapshotProvider({
+  data,
+  children,
+}: {
+  data: AppData;
+  children: ReactNode;
+}) {
+  return (
+    <AppDataContext.Provider value={data}>{children}</AppDataContext.Provider>
+  );
+}
+export function AppDataProvider({
+  children,
+  initialData = {},
+}: {
+  children: ReactNode;
+  initialData?: Partial<AppData>;
+}) {
+  const [data, setData] = useState<Partial<AppData>>(initialData);
+  const [error, setError] = useState("");
+  const { pathname } = useLocation();
+  const required = routeKeys(pathname);
   const requestKey = required.join(",");
   useEffect(() => {
     let cancelled = false;
     setError("");
-    Promise.all(
-      required.map((key) => {
-        if (!requests.has(key))
-          requests.set(
-            key,
-            fetch(`/data/${filenames[key]}.json`, { cache: "no-cache" })
-              .then((response) => {
-                if (!response.ok)
-                  throw new Error(`${filenames[key]}: HTTP ${response.status}`);
-                return response.json();
-              })
-              .catch((reason) => {
-                requests.delete(key);
-                throw reason;
-              }),
-          );
-        return requests.get(key)!.then((value) => [key, value]);
-      }),
-    )
-      .then((entries) => {
+    loadRouteData(pathname)
+      .then((loaded) => {
         if (!cancelled)
           setData((previous) => ({
             ...previous,
-            ...Object.fromEntries(entries),
+            ...loaded,
           }));
       })
       .catch((reason) => {

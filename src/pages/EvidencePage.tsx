@@ -54,6 +54,9 @@ export function EvidencePage() {
       : 0;
   const currentFunding = evidence.grantAwardsByYear.at(-1)?.value ?? 0;
   const fundingYear = evidence.grantAwardsByYear.at(-1)?.name;
+  const fundingRecords = evidence.grants.filter(
+    (grant) => String(grant.fiscalYear) === fundingYear,
+  ).length;
   useEffect(() => setPage(1), [query]);
   useEffect(() => setGrantPage(1), [grantQuery]);
 
@@ -82,8 +85,16 @@ export function EvidencePage() {
         />
         <MetricCard
           label={`FY${fundingYear} retrieved awards`}
-          value={`$${(currentFunding / 1_000_000).toFixed(1)}M`}
-          note="Title-matched records; current FY is partial"
+          value={
+            fundingRecords
+              ? `$${(currentFunding / 1_000_000).toFixed(1)}M`
+              : "No records"
+          }
+          note={
+            fundingRecords
+              ? "Retrieved title-matched award records"
+              : "No matching records returned for this FY"
+          }
         />
       </div>
       <div className="mb-16 grid gap-4 lg:grid-cols-[1.25fr_.8fr]">
@@ -155,7 +166,7 @@ export function EvidencePage() {
 
       <SectionHeading
         title="NIH-funded multiple myeloma projects"
-        copy="Projects require multiple myeloma in the project title and cover the current and two prior fiscal years. Amounts are the award values returned for each application record."
+        copy={`Title-matched project records for FY${evidence.grantAwardsByYear[0]?.name}–FY${fundingYear}. Amounts are the award values returned per application; the current fiscal year is incomplete.`}
       />
       <div className="mb-4 max-w-2xl">
         <SearchBox

@@ -72,7 +72,29 @@ export function OverviewPage() {
                 {change.title}
               </h3>
               <p className="mt-2 text-xs leading-6 text-[#9ba3aa]">
-                {change.detail}
+                {change.changes?.length
+                  ? change.changes
+                      .map((item) => {
+                        const label =
+                          item.field === "status"
+                            ? "Status"
+                            : item.field === "hasResults"
+                              ? "Results posted"
+                              : "Primary completion";
+                        const format = (value: string | boolean | null) =>
+                          value === null
+                            ? "Not reported"
+                            : typeof value === "boolean"
+                              ? value
+                                ? "Yes"
+                                : "No"
+                              : item.field === "status"
+                                ? prettyEnum(value)
+                                : shortDate(value);
+                        return `${label}: ${format(item.before)} → ${format(item.after)}`;
+                      })
+                      .join("; ")
+                  : change.detail}
               </p>
               <div className="mt-3 flex gap-4 text-xs">
                 <Link
@@ -126,6 +148,7 @@ export function OverviewPage() {
         </aside>
       </div>
       <div className="mt-14">
+        <SourceStatus ids={["pubmed", "nih"]} />
         <SectionHeading
           title="Studies by target family"
           copy="Distinct active studies containing a classified intervention. Combination studies can appear in multiple rows; background and comparator therapies are included."

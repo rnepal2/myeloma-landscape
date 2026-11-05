@@ -182,6 +182,12 @@ export function MethodologyPage() {
               than one reviewed target or therapy query.
             </li>
             <li>
+              Each intervention currently has one target label. Multi-target
+              agents, unresolved names and dose variants may be incompletely
+              represented. Unqueried literature targets are marked separately
+              from zero matches.
+            </li>
+            <li>
               NIH amounts reflect application records returned by RePORTER and
               can change during the current fiscal year.
             </li>
