@@ -43,4 +43,4 @@ Changes go through `feature/cleanup-and-upgrades` → `develop` → `main`, usin
 
 ## License and attribution
 
-The MIT license covers this project's code and documentation; it does not grant rights to third-party source records or linked material. This is an independent project, not affiliated with or endorsed by Johnson & Johnson or the listed data providers. See [NCBI's disclaimer and copyright guidance](https://www.ncbi.nlm.nih.gov/home/about/policies/) for PubMed content.
+The MIT license covers this project's code and documentation; it does not grant rights to third-party source records or linked material. This is an independent project, not affiliated with or endorsed by any company, organization or the listed data providers. See [NCBI's disclaimer and copyright guidance](https://www.ncbi.nlm.nih.gov/home/about/policies/) for PubMed content.

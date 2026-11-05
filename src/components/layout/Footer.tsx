@@ -31,8 +31,8 @@ export function Footer() {
               publications, funding, regulatory actions, labels, and supply.
             </p>
             <p className="mt-3 max-w-sm text-[11px] leading-5 text-[#859b9d]">
-              An independent project, not affiliated with or endorsed by Johnson
-              &amp; Johnson or the listed data providers.
+              An independent project, not affiliated with or endorsed by any
+              company, organization or the listed data providers.
             </p>
           </div>
         </div>

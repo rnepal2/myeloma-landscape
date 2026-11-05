@@ -16,7 +16,6 @@ import { Pagination } from "../components/ui/Pagination";
 import { SearchBox } from "../components/ui/SearchBox";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { SourceNote } from "../components/ui/SourceNote";
-import { SourceStatus } from "../components/ui/SourceStatus";
 import { useAppData } from "../context/AppDataContext";
 import { shortDate } from "../lib/format";
 
@@ -66,7 +65,6 @@ export function EvidencePage() {
         title="PubMed literature and NIH-funded projects"
         copy="The page combines annual PubMed counts, target-linked query counts, a recent citation sample, and NIH RePORTER projects. These are record counts and award amounts, not measures of evidence quality or clinical benefit."
       />
-      <SourceStatus ids={["pubmed", "nih"]} />
       <div className="mb-5 grid overflow-hidden rounded-lg border border-[#dbe5e1] shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Indexed publication corpus"

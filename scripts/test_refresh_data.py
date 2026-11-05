@@ -1,6 +1,8 @@
 import unittest
-from scripts.refresh_data import fetch_nih_grants
+from scripts.refresh_data import fetch_nih_grants, require_complete_sources
 import io
+import tempfile
+from pathlib import Path
 from datetime import date
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
@@ -13,6 +15,42 @@ def sample_trial(nct="NCT00000001", **overrides):
 
 
 class CorrectnessRegressionTest(unittest.TestCase):
+    def test_staged_refresh_validates_before_replacing_published_files(self):
+        import scripts.refresh_data as refresh
+        import scripts.validate_data as validator
+        with tempfile.TemporaryDirectory() as folder:
+            published = Path(folder) / "published"
+            published.mkdir()
+            (published / "summary.json").write_text('{"version":"accepted"}')
+            def build():
+                (refresh.OUT / "summary.json").write_text('{"version":"new"}')
+            def validate():
+                self.assertNotEqual(published, validator.DATA)
+                self.assertEqual('{"version":"accepted"}', (published / "summary.json").read_text())
+            with patch.object(refresh, "OUT", published), patch.object(refresh, "build_snapshot", side_effect=build), patch.object(validator, "main", side_effect=validate) as check:
+                refresh.main()
+            check.assert_called_once()
+            self.assertEqual('{"version":"new"}', (published / "summary.json").read_text())
+
+    def test_failed_staged_refresh_preserves_published_files(self):
+        import scripts.refresh_data as refresh
+        with tempfile.TemporaryDirectory() as folder:
+            published = Path(folder) / "published"
+            published.mkdir()
+            (published / "summary.json").write_text('{"version":"accepted"}')
+            def fail_after_write():
+                (refresh.OUT / "summary.json").write_text('{"version":"incomplete"}')
+                require_complete_sources([{"name": "PubMed", "status": "fallback"}])
+            with patch.object(refresh, "OUT", published), patch.object(refresh, "build_snapshot", side_effect=fail_after_write):
+                with self.assertRaisesRegex(RuntimeError, "PubMed"):
+                    refresh.main()
+            self.assertEqual('{"version":"accepted"}', (published / "summary.json").read_text())
+
+    def test_incomplete_refresh_cannot_publish(self):
+        with self.assertRaisesRegex(RuntimeError, "PubMed"):
+            require_complete_sources([{"name": "ClinicalTrials.gov", "status": "current"}, {"name": "PubMed", "status": "fallback"}])
+        require_complete_sources([{"name": "PubMed", "status": "current"}])
+
     def test_retries_http_success_with_api_error(self):
         responses = [io.StringIO('{"error":"temporary upstream error"}'), io.StringIO('{"esearchresult":{"count":"20"}}')]
         with patch("urllib.request.urlopen", side_effect=responses) as request, patch("time.sleep"):
